@@ -34,16 +34,6 @@ public class OpOrder implements Serializable {
     private Integer userId;
 
     /**
-     * 用户收货地址id
-     */
-    private Integer addressId;
-
-    /**
-     * 用户编号
-     */
-    private String userSn;
-
-    /**
      * 全站唯一订单编号
      */
     private String orderSn;
@@ -119,7 +109,7 @@ public class OpOrder implements Serializable {
     private Integer sourceType;
 
     /**
-     * 0待评论 1已评论
+     * 0待评论 1已评价
      */
     private Integer commentStatus;
 

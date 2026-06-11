@@ -38,11 +38,6 @@ public class ApxCoursePlayLog implements Serializable {
     private Integer courseId;
 
     /**
-     * 课程名称
-     */
-    private String courseName;
-
-    /**
      * 开始观看时间
      */
     private LocalDateTime startTime;

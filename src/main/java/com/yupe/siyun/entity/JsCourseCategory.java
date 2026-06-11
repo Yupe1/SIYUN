@@ -33,11 +33,6 @@ public class JsCourseCategory implements Serializable {
     private String cateName;
 
     /**
-     * 0禁用 1正常
-     */
-    private Integer status;
-
-    /**
      * 排序序号
      */
     private Integer sortNum;
@@ -66,10 +61,5 @@ public class JsCourseCategory implements Serializable {
      * 更新时间
      */
     private LocalDateTime updateTime;
-
-    /**
-     * 备注
-     */
-    private String remark;
 }
 

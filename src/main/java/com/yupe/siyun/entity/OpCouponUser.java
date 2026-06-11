@@ -43,11 +43,6 @@ public class OpCouponUser implements Serializable {
     private LocalDateTime getTime;
 
     /**
-     * 到期时间
-     */
-    private LocalDateTime expireTime;
-
-    /**
      * 0未使用 1已使用 2已过期
      */
     private Integer status;

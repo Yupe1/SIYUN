@@ -1,8 +1,6 @@
 package com.yupe.siyun.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -101,5 +99,9 @@ public class ObjFrontUser implements Serializable {
      * 账户余额
      */
     private Double wallet;
+
+    //修改密码用
+    @TableField(exist = false)
+    private String newPassword;
 }
 

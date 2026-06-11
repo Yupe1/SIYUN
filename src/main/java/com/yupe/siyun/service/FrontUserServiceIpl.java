@@ -17,7 +17,7 @@ public class FrontUserServiceIpl extends ServiceImpl<FrontUserMapper, ObjFrontUs
     @Autowired
     private SafeUtil safeUtil;
     @Override
-    public ObjFrontUser login(ObjFrontUser user) {
+    public ObjFrontUser login(ObjFrontUser user, HttpSession session) {
         ObjFrontUser u = this.getOne(
                 new LambdaQueryWrapper<ObjFrontUser>()
                         .eq(ObjFrontUser::getStuTel, user.getStuTel())
@@ -25,6 +25,7 @@ public class FrontUserServiceIpl extends ServiceImpl<FrontUserMapper, ObjFrontUs
         if(u == null || u.getStatus() != 0 || !safeUtil.verifyPassword(user.getPassword(), u.getPassword())){
             throw new MyException(ErrorType.WRONG_PASSWORD_ERR,"账号不存在或密码错误");
         }
+        session.setAttribute("user", u);
         u.setPassword(null);
         return u;
     }
@@ -41,5 +42,17 @@ public class FrontUserServiceIpl extends ServiceImpl<FrontUserMapper, ObjFrontUs
         //密码加密后存数据库
         user.setPassword(safeUtil.transPassword(user.getPassword()));
         this.save(user); 
+    }
+
+    @Override
+    public void changePassword(ObjFrontUser user, ObjFrontUser u) {
+        if(!safeUtil.verifyPassword(user.getPassword(), u.getPassword())){
+            throw new MyException(ErrorType.WRONG_PASSWORD_ERR,"密码错误");
+        }
+        if(user.getPassword().equals(user.getNewPassword())){
+            throw new MyException(ErrorType.WRONG_INFO,"新密码不能与旧密码相同");
+        }
+        u.setPassword(safeUtil.transPassword(user.getNewPassword()));
+        this.updateById(u);
     }
 }

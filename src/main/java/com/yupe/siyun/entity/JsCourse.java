@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("js_course")
+@TableName("v_course")
 public class JsCourse implements Serializable {
     
     private static final long serialVersionUID = 1L;
@@ -103,6 +103,7 @@ public class JsCourse implements Serializable {
      */
     private Integer duration;
 
+    //==================================视图独占属性==========================================
     /**
      * 点赞总数
      */
@@ -127,7 +128,7 @@ public class JsCourse implements Serializable {
      * 实际销量
      */
     private Integer salesVolume;
-
+    //========================================================================================
     /**
      * 创建人id
      */
