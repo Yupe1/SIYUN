@@ -8,18 +8,21 @@ import lombok.NoArgsConstructor;
 import java.io.Serializable;
 import java.time.LocalDate;
 
-/**
- * 前端用户表
+/*
+    此表仅供查询
+    此表仅供查询
+    此表仅供查询
  */
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("obj_front_user")
-public class ObjFrontUser implements Serializable {
-    
+@TableName("v_front_user")
+public class ObjFrontUserWithWallet implements Serializable {
+
     private static final long serialVersionUID = 1L;
 
-    @TableId(value = "id", type = IdType.AUTO)
+    @TableId(value = "id")
     private Integer id;
 
     private String stuTel;
@@ -39,9 +42,8 @@ public class ObjFrontUser implements Serializable {
     private String email;
     private String jobOrient;
     private String remark;
-
-    //修改密码用
-    @TableField(exist = false)
-    private String newPassword;
+    //账户余额
+    private Double wallet;
+    @Version
+    private Integer version;
 }
-

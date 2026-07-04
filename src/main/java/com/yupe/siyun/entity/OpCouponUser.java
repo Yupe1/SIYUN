@@ -21,40 +21,15 @@ public class OpCouponUser implements Serializable {
     
     private static final long serialVersionUID = 1L;
 
-    /**
-     * 主键ID
-     */
     @TableId(value = "id", type = IdType.AUTO)
     private Integer id;
 
-    /**
-     * 优惠券id
-     */
     private Integer couponId;
-
-    /**
-     * 前台用户id
-     */
     private Integer userId;
-
-    /**
-     * 获取时间
-     */
     private LocalDateTime getTime;
-
-    /**
-     * 0未使用 1已使用 2已过期
-     */
+    //0未使用 1已使用 2已过期
     private Integer status;
-
-    /**
-     * 使用时间
-     */
     private LocalDateTime useTime;
-
-    /**
-     * 关联订单id
-     */
     private Integer orderId;
 }
 
