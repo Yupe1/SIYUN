@@ -12,11 +12,6 @@ public class TimeMetaObjectHandler implements MetaObjectHandler {
     public void insertFill(MetaObject metaObject) {
         this.strictInsertFill(metaObject,"createTime", LocalDateTime.class, LocalDateTime.now());
         this.strictInsertFill(metaObject,"updateTime", LocalDateTime.class, LocalDateTime.now());
-        this.strictInsertFill(metaObject,"collectTime", LocalDateTime.class, LocalDateTime.now());
-        this.strictInsertFill(metaObject,"likeTime", LocalDateTime.class, LocalDateTime.now());
-        this.strictInsertFill(metaObject,"sendTime", LocalDateTime.class, LocalDateTime.now());
-        this.strictInsertFill(metaObject,"regieterDate", LocalDateTime.class, LocalDateTime.now());
-        this.strictInsertFill(metaObject,"applyTime", LocalDateTime.class, LocalDateTime.now());
     }
 
     @Override
