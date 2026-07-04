@@ -11,66 +11,49 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
 public class FileService {
-    @Value("${upload.path}")
+    private static final Set<String> ALLOWED_SUFFIXES = Set.of(
+            ".jpg", ".jpeg", ".png", ".gif", ".webp",
+            ".pdf", ".txt",
+            ".mp4", ".mov", ".mkv", ".avi", ".flv", ".wmv", ".webm"
+    );
+
+    @Value("${upload.root-path}")
     private String basePath;
-    @Value("${upload.url}")
+    @Value("${upload.url-prefix}")
     private String baseUrl;
+
     public String uploadFile(MultipartFile file, String subPath) throws IOException {
         String originName = file.getOriginalFilename();
-        String suffix = originName.substring(originName.lastIndexOf("."));
-        if(!(suffix.equalsIgnoreCase(".jpg")
-                || suffix.equalsIgnoreCase(".jpeg")
-                || suffix.equalsIgnoreCase("png")
-                || suffix.equalsIgnoreCase(".pdf")
-                || suffix.equalsIgnoreCase(".txt"))) {
+        if (originName == null || !originName.contains(".")) {
+            throw new MyException(ErrorType.FORMATE_ERROR,"文件名格式错误");
+        }
+        String suffix = originName.substring(originName.lastIndexOf(".")).toLowerCase(Locale.ROOT);
+        if (!ALLOWED_SUFFIXES.contains(suffix)) {
             throw new MyException(ErrorType.FORMATE_ERROR,"文件格式错误");
         }
         String newFileName = UUID.randomUUID().toString() + suffix;
-//==========================================================================
-        // 3. 构建安全的绝对路径 (排雷2：用 File 构造器代替 String 的 + 拼接)
-        // 假设 basePath 是 /opt/homebrew/var/www
-        // 假设 subPath 是 uploaded/book/
-        File targetDir = new File(basePath, subPath);
 
-        // 4. 排雷1：检查并创建多级父目录 (非常关键！)
+        String normalizedSubPath = normalizeSubPath(subPath);
+        File targetDir = new File(basePath, normalizedSubPath);
         if (!targetDir.exists()) {
             targetDir.mkdirs();
         }
 
-        // 5. 将文件保存到目标位置
         File toFile = new File(targetDir, newFileName);
         file.transferTo(toFile);
-
-        // 6. 生成返回给前端的 URL
-        // 你的 indexOf 方法很巧妙，但需要确保 newFilePath.getAbsolutePath() 里一定包含 baseUrl
-        // 更安全的做法是：baseUrl + subPath + newFileName (这里简单处理斜杠问题)
-        String absolutePath = toFile.getAbsolutePath();
-        int urlIndex = absolutePath.indexOf(baseUrl);
-        if (urlIndex != -1) {
-            return absolutePath.substring(urlIndex);
-        } else {
-            // 降级容错方案，以防 indexOf 匹配不到
-            return baseUrl + subPath + newFileName;
-        }
-//==========================================================================
-//        String newFilePath = Path + path + newFileName;
-//        File toFile = new File(newFilePath);
-//        file.transferTo(toFile);
-//        String url = newFilePath.substring(newFilePath.indexOf(Url));
-//        return url;
+        return buildPublicUrl(normalizedSubPath, newFileName);
     }
+
     public void deletePhysicalFile(String dbPath) {
         try {
-            // 将基础路径和数据库路径拼接。
-            // 因为你的 basePath 是 /opt/homebrew/var/www，dbPath 是 /uploaded/book/xxx.pdf
-            // 拼起来就是完整的 Mac 本地绝对路径
-            File targetFile = new File(basePath, dbPath);
+            File targetFile = resolvePhysicalFile(dbPath);
 
-            // 判断文件是否存在且是一个普通文件
             if (targetFile.exists() && targetFile.isFile()) {
                 boolean deleted = targetFile.delete();
                 if (deleted) {
@@ -80,8 +63,42 @@ public class FileService {
                 }
             }
         } catch (Exception e) {
-            // 💡 关键点：删文件报错不应该导致整个事务回滚（书已经删了，留个孤儿文件总比删不掉书强）
             System.err.println("尝试删除附件时发生异常: " + e.getMessage());
         }
+    }
+
+    private String normalizeSubPath(String subPath) {
+        if (subPath == null || subPath.isBlank()) {
+            return "";
+        }
+        String normalized = subPath.replace("\\", "/");
+        while (normalized.startsWith("/")) {
+            normalized = normalized.substring(1);
+        }
+        return normalized.endsWith("/") ? normalized : normalized + "/";
+    }
+
+    private String buildPublicUrl(String normalizedSubPath, String fileName) {
+        String normalizedBaseUrl = baseUrl.endsWith("/") ? baseUrl : baseUrl + "/";
+        String publicPath = normalizedSubPath;
+        if (publicPath.startsWith("uploaded/")) {
+            publicPath = publicPath.substring("uploaded/".length());
+        }
+        return normalizedBaseUrl + publicPath + fileName;
+    }
+
+    private File resolvePhysicalFile(String dbPath) {
+        if (dbPath == null || dbPath.isBlank()) {
+            return new File(basePath);
+        }
+        String normalized = dbPath.replace("\\", "/");
+        while (normalized.startsWith("/")) {
+            normalized = normalized.substring(1);
+        }
+        if (normalized.startsWith("uploaded/")) {
+            normalized = normalized.substring("uploaded/".length());
+            normalized = "uploaded/" + normalized;
+        }
+        return new File(basePath, normalized);
     }
 }

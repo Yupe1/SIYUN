@@ -21,50 +21,11 @@ public class ApxDictType implements Serializable {
     
     private static final long serialVersionUID = 1L;
 
-    /**
-     * 主键ID
-     */
     @TableId(value = "id", type = IdType.AUTO)
     private Integer id;
 
-    /**
-     * 字典名称
-     */
-    private String dictName;
-
-    /**
-     * 字典类型标识
-     */
     private String dictType;
-
-    /**
-     * 0正常 1停用
-     */
     private Integer status;
 
-    /**
-     * 创建人id
-     */
-    private Integer createBy;
-
-    /**
-     * 创建时间
-     */
-    private LocalDateTime createTime;
-
-    /**
-     * 更新人id
-     */
-    private Integer updateBy;
-
-    /**
-     * 更新时间
-     */
-    private LocalDateTime updateTime;
-
-    /**
-     * 备注
-     */
-    private String remark;
 }
 

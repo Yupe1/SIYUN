@@ -20,7 +20,7 @@ public class FrontUserInterceptor implements HandlerInterceptor {
 
         // 校验前台会员是否登录
         HttpSession session = request.getSession();
-        if (session.getAttribute("frontUser") == null) {
+        if (session.getAttribute("student") == null) {
             throw new MyException(ErrorType.NOT_LOGIN, "未登录客户端，无权操作");
         }
         return true;

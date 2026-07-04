@@ -3,29 +3,25 @@ package com.yupe.siyun.entity;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.Version;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
-import java.time.LocalDateTime;
 
-/**
- * 课程播放记录表
- */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("apx_course_play_log")
-public class ApxCoursePlayLog implements Serializable {
-    
-    private static final long serialVersionUID = 1L;
-    @TableId(value = "id", type = IdType.AUTO)
-    private Integer id;
-    private Integer userId;
-    private Integer courseId;
-    private LocalDateTime startTime;
-    private LocalDateTime endTime;
-    private String videoUrl;
-}
+@TableName("op_coupon")
+public class OpFrontUserWallet implements Serializable {
 
+    private static final long serialVersionUID = 1L;
+
+
+    @TableId(value = "front_user_id")
+    private Integer frontUserId;
+    private Double wallet;
+    @Version
+    private Integer version;
+}

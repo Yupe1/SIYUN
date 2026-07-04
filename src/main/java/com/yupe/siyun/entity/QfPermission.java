@@ -1,8 +1,6 @@
 package com.yupe.siyun.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -21,45 +19,23 @@ public class QfPermission implements Serializable {
     
     private static final long serialVersionUID = 1L;
 
-    /**
-     * 主键ID
-     */
     @TableId(value = "id", type = IdType.AUTO)
     private Integer id;
-
-    /**
-     * 权限名称
-     */
+    //权限名称
     private String name;
-
-    /**
-     * 权限描述
-     */
+    //权限描述
     private String permDesc;
-
-    /**
-     * 父级权限主键
-     */
+    //父级权限主键
     private Integer parentId;
-
-    /**
-     * 创建人id
-     */
-    private Integer createBy;
-
-    /**
-     * 创建时间
-     */
+    private String path;//前端路由路径
+    private String perms;//权限标识符 后端路径 eg: hr:goods:delete
+    //0停用 1正常
+    private Integer status;
+    @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
-
-    /**
-     * 更新人id
-     */
-    private Integer updateBy;
-
-    /**
-     * 更新时间
-     */
+    @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
+    //更新人id
+    private Integer updateBy;
 }
 
