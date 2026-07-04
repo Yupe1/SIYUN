@@ -11,6 +11,4 @@ public interface ErrorType {
     int OPERATION_FAILED = 1011;
     int WRONG_INFO = 1010;
     int PERMISSION_DENIED = 1011;
-    int COMMENT_NOT_EXIST = 1012;
-    int NO_AUTH_ID = 1013;
 }
