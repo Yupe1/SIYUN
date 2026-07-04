@@ -31,7 +31,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
     @Autowired
     private BackRoleInterceptor backRoleInterceptor;
 
-    @Value("${upload.root-path}")
+    @Value("${upload.path}")
     private String basePath;
 
     /**

@@ -12,7 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
-public class FrontUserServiceImpl extends ServiceImpl<FrontUserMapper, ObjFrontUser> implements FrontUserService{
+public class FrontUserServiceIpl extends ServiceImpl<FrontUserMapper, ObjFrontUser> implements FrontUserService{
 
     @Autowired
     private SafeUtil safeUtil;
@@ -25,7 +25,7 @@ public class FrontUserServiceImpl extends ServiceImpl<FrontUserMapper, ObjFrontU
         if(u == null || u.getStatus() != 0 || !safeUtil.verifyPassword(user.getPassword(), u.getPassword())){
             throw new MyException(ErrorType.WRONG_PASSWORD_ERR,"账号不存在或密码错误");
         }
-        session.setAttribute("student", u);
+        session.setAttribute("user", u);
         u.setPassword(null);
         return u;
     }

@@ -20,12 +20,31 @@ import java.time.LocalDateTime;
 public class ApxCoursePlayLog implements Serializable {
     
     private static final long serialVersionUID = 1L;
+
+    /**
+     * 主键ID
+     */
     @TableId(value = "id", type = IdType.AUTO)
     private Integer id;
+
+    /**
+     * 前台用户id
+     */
     private Integer userId;
+
+    /**
+     * 课程id
+     */
     private Integer courseId;
+
+    /**
+     * 开始观看时间
+     */
     private LocalDateTime startTime;
+
+    /**
+     * 结束观看时间
+     */
     private LocalDateTime endTime;
-    private String videoUrl;
 }
 
