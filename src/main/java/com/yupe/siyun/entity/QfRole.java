@@ -8,30 +8,22 @@ import lombok.NoArgsConstructor;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
-/**
- * 全站评论表
- */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("co_comment")
-public class CoComment implements Serializable {
-    
+@TableName("qf_role")
+public class QfRole implements Serializable {
+
     private static final long serialVersionUID = 1L;
 
     @TableId(value = "id", type = IdType.AUTO)
     private Integer id;
-    private Integer userId;
-    private Integer entityId;
-    private Integer entityType;
-    private String content;
-    private Integer parentId;
-    @TableLogic(value = "1",delval = "0")
-    private Integer statusShow;
-    private Integer countLike;
-    private Integer countReply;
+    private String roleName;
+    private String roleKey;
+    private Integer sortNum;
+    private Integer status;
+    private String remark;
+    private Integer createBy;
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
-
 }
-

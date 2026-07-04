@@ -39,12 +39,6 @@ upload:
   url-prefix: /uploaded/
   # ?????????true=???false=???????S3/OSS?
   enable-local-storage: true
-
-  house-path: uploaded/house/media/
-  house-cover-path: uploaded/house/cover/
-  head-path: uploaded/house/head/
-  agreement-path: uploaded/house/agreement/
-
   # ?????????
   profile:
 

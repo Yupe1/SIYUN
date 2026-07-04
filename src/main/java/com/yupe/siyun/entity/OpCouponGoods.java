@@ -10,22 +10,18 @@ import lombok.NoArgsConstructor;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
-/**
- * 课程播放记录表
- */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("apx_course_play_log")
-public class ApxCoursePlayLog implements Serializable {
-    
+@TableName("op_coupon_goods")
+public class OpCouponGoods implements Serializable {
+
     private static final long serialVersionUID = 1L;
+
+
     @TableId(value = "id", type = IdType.AUTO)
     private Integer id;
-    private Integer userId;
-    private Integer courseId;
-    private LocalDateTime startTime;
-    private LocalDateTime endTime;
-    private String videoUrl;
+    private Integer goodsId;
+    private Integer couponId;
+    private Integer quota;
 }
-

@@ -9,33 +9,28 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-/**
- * 营销优惠券表
- */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("op_coupon")
-public class OpCoupon implements Serializable {
-    
-    private static final long serialVersionUID = 1L;
+@TableName("v_goods")
+public class JsGoodsVO implements Serializable {
 
+    private static final long serialVersionUID = 1L;
 
     @TableId(value = "id", type = IdType.AUTO)
     private Integer id;
-
-    private String couponSn;
-    private String couponName;
-    private Double amount;
-    private String imgUrl;
-    private LocalDateTime startTime;
-    private LocalDateTime endTime;
-    //0下线 1上线
-    private Integer statusShelf;
-    //1无限制自领 2活动自动发放 3特定营销赠送
-    private Integer issueType;
-    //0无限制 1仅限实体商品 2仅限视频课程
-    private Integer applyType;
+    private Integer cateName;
+    //0普通 1新品 2推荐
+    private Integer recommendStatus;
+    //服务保证标签(退货无忧/快速退款/包邮等)
+    private String serviceTags;
+    private String goodsName;
+    private String keywords;
+    private String mainPicUrl;
+    private BigDecimal priceOriginal;
+    private BigDecimal pricePromotion;
+    private String intro;
+    private Integer salesVolume;
     private Integer createBy;
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
@@ -43,4 +38,3 @@ public class OpCoupon implements Serializable {
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
 }
-
