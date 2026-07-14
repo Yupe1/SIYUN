@@ -382,6 +382,7 @@ public class FrontFunctionController {
         }else{
             apxCourseCollectLogMapper.delete(queryWrapper);
         }
+        momentArticleService.updateCollect(moment);
         return ResultData.success("collect +-op success");
     }
     //点赞+-
@@ -403,6 +404,7 @@ public class FrontFunctionController {
         }else{
             apxCourseLikeLogMapper.delete(queryWrapper);
         }
+        momentArticleService.updateLike(moment);
         return ResultData.success("like +-op success");
     }
     //转发

@@ -9,6 +9,10 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
 
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
+
 @Component
 public class BackRoleInterceptor implements HandlerInterceptor {
     @Override
@@ -25,47 +29,78 @@ public class BackRoleInterceptor implements HandlerInterceptor {
         }
 
         // 3. 校验后台登录状态
-        HttpSession session = request.getSession();
-        // 假设登录成功后，我们在 Session 存了后台用户对象 backUser 和他的角色字符串 backRole
-        Object backUser = session.getAttribute("backUser");
-        String backRole = (String) session.getAttribute("backRole");
-
-        if (backUser == null || backRole == null) {
+        HttpSession session = request.getSession(false);
+        if (session == null) {
             throw new MyException(ErrorType.NOT_LOGIN, "后台管理会话过期，请重新登录");
         }
 
-        // 🌟 超级管理员（ADMIN）拥有至高无上的权限，直接放行一切后台接口
-        if ("ADMIN".equals(backRole)) {
+        Object backUser = session.getAttribute("backUser");
+        Set<String> backRoles = toStringSet(session.getAttribute("backRoles"));
+        Object primaryRole = session.getAttribute("backRole");
+        if (primaryRole != null) {
+            backRoles.add(primaryRole.toString());
+        }
+
+        if (backUser == null || backRoles.isEmpty()) {
+            throw new MyException(ErrorType.NOT_LOGIN, "后台管理会话过期，请重新登录");
+        }
+
+        // 超级管理员拥有全部后台接口权限
+        if (backRoles.contains("ADMIN")) {
             return true;
         }
 
-        // 4. 获取目标方法或类上的 @RequiresRole 注解
         HandlerMethod handlerMethod = (HandlerMethod) handler;
-        // 先检查方法上有没有注解
-        RequiresRole requiresRole = handlerMethod.getMethodAnnotation(RequiresRole.class);
-        // 如果方法上没有，再检查类上有没有注解
-        if (requiresRole == null) {
-            requiresRole = handlerMethod.getBeanType().getAnnotation(RequiresRole.class);
+        RequiresPermission requiresPermission = handlerMethod.getMethodAnnotation(RequiresPermission.class);
+        if (requiresPermission == null) {
+            requiresPermission = handlerMethod.getBeanType().getAnnotation(RequiresPermission.class);
         }
 
-        // 5. 如果接口加了角色注解，开始比对角色权限
-        if (requiresRole != null) {
-            String[] allowedRoles = requiresRole.value();
+        if (requiresPermission != null) {
+            Set<String> backPerms = toStringSet(session.getAttribute("backPerms"));
             boolean hasPermission = false;
 
-            for (String role : allowedRoles) {
-                if (role.equalsIgnoreCase(backRole)) {
+            for (String perm : requiresPermission.value()) {
+                if (backPerms.contains(perm) || hasWildcardPerm(backPerms, perm)) {
                     hasPermission = true;
                     break;
                 }
             }
 
-            // 如果当前员工的角色不在允许的列表里，直接抛出“权限不足”
             if (!hasPermission) {
-                throw new MyException(ErrorType.PERMISSION_DENIED, "对不起，您无权操作此业务模块");
+                throw new MyException(ErrorType.PERMISSION_DENIED, "对不起，您无权操作此功能");
             }
         }
 
         return true;
+    }
+
+    private Set<String> toStringSet(Object value) {
+        Set<String> set = new HashSet<>();
+        if (value instanceof Collection<?> collection) {
+            for (Object item : collection) {
+                if (item != null) {
+                    set.add(item.toString());
+                }
+            }
+            return set;
+        }
+        if (value != null) {
+            set.add(value.toString());
+        }
+        return set;
+    }
+
+    private boolean hasWildcardPerm(Set<String> ownedPerms, String requiredPerm) {
+        for (String ownedPerm : ownedPerms) {
+            if (!ownedPerm.endsWith("*")) {
+                continue;
+            }
+            String prefix = ownedPerm.substring(0, ownedPerm.length() - 1);
+            if (requiredPerm.startsWith(prefix)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

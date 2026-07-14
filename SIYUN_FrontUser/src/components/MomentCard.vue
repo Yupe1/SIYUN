@@ -8,8 +8,21 @@
       </view>
       <button v-if="deletable" class="delete" @tap.stop="$emit('delete', moment)">删除</button>
     </view>
-    <text v-else class="compact-title">{{ moment.title || '未命名动态' }}</text>
-    <text class="content">{{ moment.content || '暂无内容' }}</text>
+    <template v-else>
+      <view v-if="cover" class="compact-cover">
+        <image class="compact-cover-image" :src="cover" mode="aspectFill" />
+      </view>
+      <view v-else class="compact-cover placeholder-cover">
+        <text class="placeholder-text">暂无封面</text>
+      </view>
+      <text class="compact-title">{{ moment.title || '未命名动态' }}</text>
+      <view class="compact-meta">
+        <text>{{ dateText(moment.createTime) || '刚刚' }}</text>
+        <text>{{ compactNumber(moment.countLike) }} 点赞</text>
+        <text>{{ compactNumber(moment.countCollect) }} 收藏</text>
+      </view>
+    </template>
+    <text v-if="!compact" class="content">{{ moment.content || '暂无内容' }}</text>
     <image v-if="cover && !compact" class="cover" :src="cover" mode="aspectFill" />
     <view v-if="!compact" class="moment-foot">
       <text>{{ compactNumber(moment.countView) }} 浏览</text>
@@ -62,8 +75,8 @@ const avatarText = computed(() => (props.moment.title || '思').slice(0, 1))
 }
 
 .moment-card.compact {
-  min-height: 148rpx;
-  padding: 22rpx 24rpx;
+  min-height: 290rpx;
+  padding: 20rpx 24rpx;
 }
 
 .moment-head {
@@ -127,6 +140,7 @@ const avatarText = computed(() => (props.moment.title || '思').slice(0, 1))
 
 .compact-title {
   display: block;
+  margin-top: 16rpx;
   color: #253238;
   font-size: 30rpx;
   line-height: 38rpx;
@@ -136,11 +150,47 @@ const avatarText = computed(() => (props.moment.title || '思').slice(0, 1))
   white-space: nowrap;
 }
 
-.compact .content {
-  margin-top: 12rpx;
-  line-height: 38rpx;
-  max-height: 76rpx;
+.compact-cover {
+  width: 100%;
+  height: 0;
+  padding-top: 50%;
+  position: relative;
   overflow: hidden;
+  border-radius: 10rpx;
+  background: #dce8eb;
+}
+
+.compact-cover-image {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.placeholder-cover {
+  color: #9aabb1;
+  font-size: 24rpx;
+}
+
+.placeholder-text {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  text-align: center;
+  transform: translateY(-50%);
+}
+
+.compact-meta {
+  margin-top: 12rpx;
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  color: #91a0a6;
+  font-size: 22rpx;
+  line-height: 28rpx;
 }
 
 .cover {

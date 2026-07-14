@@ -31,7 +31,7 @@ public class JsMomentsArticle implements Serializable {
     private Integer countView;
     private Integer countLike;
     private Integer countComment;
-    private Integer countShare;
+    private Integer countCollect;
     private Integer sortNum;
     //0隐藏 1显示
     private Integer statusShow;

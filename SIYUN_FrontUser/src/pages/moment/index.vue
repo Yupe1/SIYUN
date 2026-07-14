@@ -3,6 +3,9 @@
     <view class="top-bar moment-top">
       <view class="top-title">微圈</view>
       <button class="publish" @tap="goPublish">发布</button>
+    </view>
+
+    <view class="search-wrap moment-search-wrap">
       <view class="search-box moment-search">
         <text class="search-mark"></text>
         <input
@@ -17,7 +20,7 @@
       </view>
     </view>
 
-    <view class="content">
+    <view class="content moment-content">
       <view class="segmented">
         <button class="seg" :class="{ active: mode === 'all' }" @tap="switchMode('all')">推荐</button>
         <button class="seg" :class="{ active: mode === 'mine' }" @tap="switchMode('mine')">我的</button>
@@ -226,6 +229,7 @@ async function handleShare(moment) {
 <style scoped>
 .moment-top {
   position: relative;
+  padding-bottom: 10rpx;
 }
 
 .publish {
@@ -242,35 +246,44 @@ async function handleShare(moment) {
 }
 
 .moment-search {
-  margin: 0 24rpx 20rpx;
-  background: rgba(255, 255, 255, 0.34);
+  margin: 0;
+  background: #d9e7e7;
+}
+
+.moment-search-wrap {
+  padding: 18rpx 24rpx 10rpx;
+  background: #f4f8f8;
 }
 
 .search-mark {
   margin-right: 12rpx;
-  color: #ffffff;
+  color: #7f9095;
   font-size: 22rpx;
   font-weight: 800;
 }
 
 .search-placeholder {
-  color: rgba(255, 255, 255, 0.78);
+  color: #93a1a6;
 }
 
 .moment-search .search-input {
   flex: 1;
-  color: #ffffff;
+  color: #263238;
 }
 
 .search-arrow {
   width: 52rpx;
   height: 52rpx;
   border-radius: 26rpx;
-  background: rgba(255, 255, 255, 0.26);
-  color: #ffffff;
+  background: rgba(24, 189, 164, 0.12);
+  color: #18bda4;
   font-size: 40rpx;
   line-height: 48rpx;
   font-weight: 900;
+}
+
+.moment-content {
+  padding-top: 14rpx;
 }
 
 .segmented {

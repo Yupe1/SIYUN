@@ -20,10 +20,10 @@ public class BackAuthInterceptor implements HandlerInterceptor {
         }
 
         // 2. 验证后台 Session 中是否存在登录标志
-        HttpSession session = request.getSession();
+        HttpSession session = request.getSession(false);
 
-        // 对应我们在登录成功时存入 Session 的键名（例如 "backUser"）
-        if (session.getAttribute("backUser") == null) {
+        // 对应我们在登录成功时存入 Session 的键名
+        if (session == null || session.getAttribute("backUser") == null) {
             // 抛出你统一定义的未登录异常，由全局异常处理器拦截并返回给前端
             throw new MyException(ErrorType.NOT_LOGIN, "后台管理会话失效，请重新登录");
         }

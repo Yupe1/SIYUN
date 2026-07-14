@@ -7,7 +7,6 @@ import java.lang.annotation.Target;
 
 @Target({ElementType.METHOD, ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
-public @interface RequiresRole {
-    // 允许访问该接口的角色列表，比如 {"HR", "ADMIN"}
+public @interface RequiresPermission {
     String[] value();
 }

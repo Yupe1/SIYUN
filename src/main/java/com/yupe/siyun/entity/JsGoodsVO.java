@@ -19,7 +19,7 @@ public class JsGoodsVO implements Serializable {
 
     @TableId(value = "id", type = IdType.AUTO)
     private Integer id;
-    private Integer cateName;
+    private String cateName;
     //0普通 1新品 2推荐
     private Integer recommendStatus;
     //服务保证标签(退货无忧/快速退款/包邮等)

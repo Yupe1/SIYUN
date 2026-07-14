@@ -101,7 +101,8 @@ import EmptyState from '@/components/EmptyState.vue'
 import MomentCard from '@/components/MomentCard.vue'
 import { getMyCollect } from '@/api/course'
 import { deleteMoment, getMyMoments } from '@/api/moment'
-import { isSessionExpiredError, pickResult } from '@/utils/request'
+import { h5ReplaceTo } from '@/utils/navigation'
+import { isNotFoundError, isSessionExpiredError, pickResult } from '@/utils/request'
 import { useUserStore } from '@/stores/user'
 
 const CURRENT_COURSE_KEY = 'SIYUN_CURRENT_COURSE'
@@ -126,7 +127,7 @@ async function hydrateAndLoad() {
     try {
       await userStore.refresh()
     } catch (error) {
-      if (!isSessionExpiredError(error)) {
+      if (!isSessionExpiredError(error) && !isNotFoundError(error)) {
         uni.showToast({ title: error.message || '用户状态刷新失败', icon: 'none' })
       }
     }
@@ -160,13 +161,11 @@ function goCreatorApply() {
     uni.showToast({ title: '请先完成实名认证', icon: 'none' })
     return
   }
-  // #ifdef H5
-  const { origin, pathname, search } = window.location
-  window.location.replace(`${origin}${pathname}${search}#/pages/moment/index`)
-  return
-  // #endif
+  if (h5ReplaceTo('/pages/moment/creator-apply')) {
+    return
+  }
 
-  uni.redirectTo({ url: '/pages/moment/index' })
+  uni.navigateTo({ url: '/pages/moment/creator-apply' })
 }
 
 function goPublish() {
@@ -219,7 +218,7 @@ async function loadCollect() {
     collects.value = pickResult(response, 'myCollect', [])
   } catch (error) {
     collects.value = []
-    if (!isSessionExpiredError(error)) {
+    if (!isSessionExpiredError(error) && !isNotFoundError(error)) {
       uni.showToast({ title: error.message || '加载失败', icon: 'none' })
     }
   }
@@ -238,7 +237,7 @@ async function loadMoments() {
     myMoments.value = pickResult(response, 'myMoments', [])
   } catch (error) {
     myMoments.value = []
-    if (!isSessionExpiredError(error)) {
+    if (!isSessionExpiredError(error) && !isNotFoundError(error)) {
       uni.showToast({ title: error.message || '加载失败', icon: 'none' })
     }
   }

@@ -10,14 +10,14 @@
         <text class="title">{{ moment.title || '未命名动态' }}</text>
         <view class="meta-row">
           <text>{{ dateText(moment.createTime) || '刚刚' }}</text>
-          <text>{{ compactNumber(moment.countView) }} 浏览</text>
+          <!-- <text>{{ compactNumber(moment.countView) }} 浏览</text> -->
         </view>
         <image v-if="cover" class="cover" :src="cover" mode="aspectFill" />
         <text class="article">{{ moment.content || '暂无内容' }}</text>
         <view class="stats">
           <text>{{ compactNumber(moment.countLike) }} 点赞</text>
-          <text>{{ compactNumber(moment.countComment) }} 评论</text>
-          <text>{{ compactNumber(moment.countShare) }} 分享</text>
+          <!-- <text>{{ compactNumber(moment.countComment) }} 评论</text> -->
+          <text>{{ compactNumber(moment.countCollect) }} 收藏</text>
         </view>
         <view class="actions">
           <button class="action" @tap="handleLike">点赞</button>
@@ -36,7 +36,8 @@ import { onLoad } from '@dcloudio/uni-app'
 import EmptyState from '@/components/EmptyState.vue'
 import { collectMoment, getMoment, likeMoment, shareMoment } from '@/api/moment'
 import { assetUrl, compactNumber, dateText } from '@/utils/format'
-import { pickResult } from '@/utils/request'
+import { h5ReplaceTo } from '@/utils/navigation'
+import { isSessionExpiredError, pickResult } from '@/utils/request'
 import { useUserStore } from '@/stores/user'
 
 const CURRENT_MOMENT_KEY = 'SIYUN_CURRENT_MOMENT'
@@ -48,7 +49,7 @@ onLoad((query = {}) => {
   userStore.hydrate()
   const cached = uni.getStorageSync(CURRENT_MOMENT_KEY)
   if (cached && String(cached.id) === String(query.id || '')) {
-    moment.value = cached
+    setMoment(cached)
   }
   if (query.id) {
     loadMoment(query.id)
@@ -58,7 +59,10 @@ onLoad((query = {}) => {
 async function loadMoment(id) {
   try {
     const response = await getMoment(id)
-    moment.value = pickResult(response, 'moment', moment.value)
+    const nextMoment = pickResult(response, 'moment', moment.value)
+    if (nextMoment) {
+      setMoment(nextMoment)
+    }
   } catch (error) {
     if (!moment.value) {
       uni.showToast({ title: error.message || '加载失败', icon: 'none' })
@@ -66,18 +70,50 @@ async function loadMoment(id) {
   }
 }
 
+function setMoment(nextMoment) {
+  moment.value = nextMoment
+  uni.setStorageSync(CURRENT_MOMENT_KEY, nextMoment)
+}
+
 function goBack() {
+  if (h5ReplaceTo('/pages/moment/index')) {
+    return
+  }
+
   uni.navigateBack({
-    fail: () => uni.redirectTo({ url: '/pages/moment/index' }),
+    fail: goMomentIndex,
   })
 }
 
+function goMomentIndex() {
+  uni.redirectTo({ url: '/pages/moment/index' })
+}
+
+function goLogin() {
+  if (h5ReplaceTo('/pages/auth/login', { reload: true })) {
+    return
+  }
+
+  uni.redirectTo({ url: '/pages/auth/login' })
+}
+
 function requireLogin() {
+  userStore.hydrate()
   if (userStore.isLoggedIn) {
     return true
   }
-  uni.navigateTo({ url: '/pages/auth/login' })
+  goLogin()
   return false
+}
+
+function handleActionError(error, fallbackText) {
+  if (isSessionExpiredError(error)) {
+    userStore.expireSession()
+    uni.showToast({ title: '登录已过期，请重新登录', icon: 'none' })
+    setTimeout(goLogin, 500)
+    return
+  }
+  uni.showToast({ title: error.message || fallbackText, icon: 'none' })
 }
 
 async function handleLike() {
@@ -86,9 +122,10 @@ async function handleLike() {
   }
   try {
     await likeMoment(moment.value)
+    await loadMoment(moment.value.id)
     uni.showToast({ title: '已操作', icon: 'success' })
   } catch (error) {
-    uni.showToast({ title: error.message || '操作失败', icon: 'none' })
+    handleActionError(error, '操作失败')
   }
 }
 
@@ -98,9 +135,10 @@ async function handleCollect() {
   }
   try {
     await collectMoment(moment.value)
+    await loadMoment(moment.value.id)
     uni.showToast({ title: '已操作', icon: 'success' })
   } catch (error) {
-    uni.showToast({ title: error.message || '操作失败', icon: 'none' })
+    handleActionError(error, '操作失败')
   }
 }
 
@@ -112,7 +150,7 @@ async function handleShare() {
     await shareMoment(moment.value)
     uni.showToast({ title: '已分享', icon: 'success' })
   } catch (error) {
-    uni.showToast({ title: error.message || '分享失败', icon: 'none' })
+    handleActionError(error, '分享失败')
   }
 }
 </script>

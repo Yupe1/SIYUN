@@ -1,27 +1,39 @@
-
 server:
   port: 8081
   servlet:
     context-path:
     session:
       cookie:
-        same-site: lax # ?? none?? none ???? https
+        # SameSite cookie attribute configuration:
+        # 'lax': Standard protection against CSRF, works for normal cross-site requests.
+        # 'none': Requires Secure attribute (HTTPS mandatory) for cross-site cookie transmission.
+        same-site: lax
+
 spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://127.0.0.1:3306/SIYUN?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=GMT%2b8&allowPublicKeyRetrieval=true
     username: root
     password: 1234
+
   servlet:
     multipart:
-      enabled: true # open file upload?default?
+      # Enables Spring Multipart file upload support (default is true)
+      enabled: true
+      # Maximum allowed size for a single uploaded file
       max-file-size: 500MB
+      # Maximum allowed size for an entire multipart/form-data request
       max-request-size: 500MB
+      # Threshold size after which files are written to disk instead of kept in memory
       file-size-threshold: 5MB
+      # Whether to resolve multipart requests lazily at the time of file access
       resolve-lazily: false
-      location: ./temp # temp file store url?choose?
+      # Temporary directory for staging large uploaded files before they are processed
+      location: ./temp
+
   web:
     resources:
+      # Static resource mapping: combines classpath assets with the local uploaded file directory
       static-locations: classpath:/static/,file:${upload.root-path}/
 
 mybatis-plus:
@@ -31,66 +43,59 @@ mybatis-plus:
     map-underscore-to-camel-case: true
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
 
+# ====================================================================
+# Custom File Upload Architecture Configurations
+# ====================================================================
 upload:
-  # ?? Mac ? Nginx ??? Web ???
+  # Root directory for file storage. Change according to OS/Environment
+  # macOS/Nginx Homebrew standard path:
   root-path: /opt/homebrew/var/www/siyun-upload/
-  # ?????????? Linux ?????????
+  # Production Linux environment fallback example:
   # root-path: /www/siyun/upload/
-  url-prefix: /uploaded/
-  # ?????????true=???false=???????S3/OSS?
-  enable-local-storage: true
-  # ?????????
-  profile:
 
-    # ===== 1. ?????? =====
+  # URL prefix used by the frontend to fetch uploaded files
+  url-prefix: /uploaded/
+
+  # Storage strategy switch: true = local disk storage, false = cloud storage (e.g., S3/OSS)
+  enable-local-storage: true
+
+  # ----------------------------------------------------------------
+  # Upload Profiles grouped by Functional Modules
+  # ----------------------------------------------------------------
+  profile:
+    # 1. User Module
     avatar:
-      # ????
       path: uploaded/avatars
-      # ????
       max-size: 2MB
-      # ???????
       allowed-types: jpg,jpeg,png,gif,webp
-      # ??????
       width: 500
-      # ??????
       height: 500
-      # ????????
       enable-compress: true
-      # ???? (1-100)
       compress-quality: 85
 
-    # ===== 2. ?????? =====
+    # 2. Education/Course Module
     course:
-      # ????
       cover:
         path: uploaded/courses/covers
         max-size: 5MB
         allowed-types: jpg,jpeg,png,webp
-        # ?????
         width: 1280
         height: 720
         enable-compress: true
         compress-quality: 90
-
-      # ????
       video:
         path: uploaded/courses/videos
         max-size: 500MB
         allowed-types: mp4,mkv,avi,flv,mov,wmv,webm
-        # ??????????
-        enable-transcode: false
-        # ?????
-        enable-thumbnail: true
-
-      # ?????????
+        enable-transcode: false # Toggle to convert video formats asynchronously
+        enable-thumbnail: true  # Toggle to automatically extract frame images
       detail:
         path: uploaded/courses/details
         max-size: 50MB
         allowed-types: jpg,jpeg,png,gif,webp
 
-    # ===== 3. ?????? =====
+    # 3. Content Management Module (CMS)
     article:
-      # ????
       cover:
         path: uploaded/articles/covers
         max-size: 5MB
@@ -99,16 +104,13 @@ upload:
         height: 675
         enable-compress: true
         compress-quality: 90
-
-      # ?????????
       content:
         path: uploaded/articles/contents
         max-size: 50MB
         allowed-types: jpg,jpeg,png,gif,webp
 
-    # ===== 4. ?????? =====
+    # 4. E-Commerce Module
     goods:
-      # ????
       image:
         path: uploaded/goods/images
         max-size: 5MB
@@ -117,27 +119,21 @@ upload:
         height: 800
         enable-compress: true
         compress-quality: 90
-
-      # ?????
       detail-images:
         path: uploaded/goods/detail-images
         max-size: 50MB
         allowed-types: jpg,jpeg,png,gif,webp
 
-    # ===== 5. ?????? =====
+    # 5. Recruitment/HR Module
     position:
-      # ??/????
       file:
         path: uploaded/position-apply/files
         max-size: 20MB
-        # ????????
         allowed-types: pdf,doc,docx,xls,xlsx,zip,rar,7z,txt,rtf
-        # ?????????
-        forbidden-types: exe,bat,cmd,sh,py,java,class
+        forbidden-types: exe,bat,cmd,sh,py,java,class # Strict blocklist for security
 
-    # ===== 6. ?????? =====
+    # 6. Marketing Module
     marketing:
-      # ?????
       coupon:
         path: uploaded/marketing/coupons
         max-size: 2MB
@@ -146,8 +142,6 @@ upload:
         height: 200
         enable-compress: true
         compress-quality: 85
-
-      # ???
       carousel:
         path: uploaded/marketing/carousels
         max-size: 5MB
@@ -156,16 +150,13 @@ upload:
         height: 620
         enable-compress: true
         compress-quality: 90
-
-      # ??????
       banner:
         path: uploaded/marketing/banners
         max-size: 5MB
         allowed-types: jpg,jpeg,png,gif,webp
 
-    # ===== 7. ?????? =====
+    # 7. Support & Feedback Module
     feedback:
-      # ????
       image:
         path: uploaded/feedback/images
         max-size: 5MB

@@ -29,6 +29,9 @@ public class FileService {
     private String baseUrl;
 
     public String uploadFile(MultipartFile file, String subPath) throws IOException {
+        if (file == null || file.isEmpty()) {
+            throw new MyException(ErrorType.WRONG_INFO, "请选择要上传的文件");
+        }
         String originName = file.getOriginalFilename();
         if (originName == null || !originName.contains(".")) {
             throw new MyException(ErrorType.FORMATE_ERROR,"文件名格式错误");
@@ -42,7 +45,10 @@ public class FileService {
         String normalizedSubPath = normalizeSubPath(subPath);
         File targetDir = new File(basePath, normalizedSubPath);
         if (!targetDir.exists()) {
-            targetDir.mkdirs();
+            boolean created = targetDir.mkdirs();
+            if (!created && !targetDir.exists()) {
+                throw new MyException(ErrorType.OPERATION_FAILED, "上传目录创建失败");
+            }
         }
 
         File toFile = new File(targetDir, newFileName);
@@ -74,6 +80,9 @@ public class FileService {
         String normalized = subPath.replace("\\", "/");
         while (normalized.startsWith("/")) {
             normalized = normalized.substring(1);
+        }
+        if (normalized.contains("..")) {
+            throw new MyException(ErrorType.FORMATE_ERROR, "文件保存路径不合法");
         }
         return normalized.endsWith("/") ? normalized : normalized + "/";
     }

@@ -21,7 +21,7 @@ public class ObjBackUser implements Serializable {
     private static final long serialVersionUID = 1L;
 
 
-    @TableId(value = "id", type = IdType.AUTO)
+    @TableId(value = "id", type = IdType.INPUT)
     private Integer id;
 
     private String name;
@@ -43,4 +43,3 @@ public class ObjBackUser implements Serializable {
     private BigDecimal salary;
     private String remark;
 }
-

@@ -38,4 +38,3 @@ public class QfPermission implements Serializable {
     //更新人id
     private Integer updateBy;
 }
-

@@ -7,4 +7,8 @@ import java.util.List;
 
 public interface MomentArticleService extends IService<JsMomentsArticle> {
     List<JsMomentsArticle> search(String keywords);
+
+    void updateLike(JsMomentsArticle moment);
+
+    void updateCollect(JsMomentsArticle moment);
 }

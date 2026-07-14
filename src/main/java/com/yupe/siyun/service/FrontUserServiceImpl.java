@@ -46,13 +46,16 @@ public class FrontUserServiceImpl extends ServiceImpl<FrontUserMapper, ObjFrontU
 
     @Override
     public void changePassword(ObjFrontUser user, ObjFrontUser u) {
-        if(!safeUtil.verifyPassword(user.getPassword(), u.getPassword())){
+        ObjFrontUser dbUser = this.getById(u.getId());
+        if(dbUser == null || !safeUtil.verifyPassword(user.getPassword(), dbUser.getPassword())){
             throw new MyException(ErrorType.WRONG_PASSWORD_ERR,"密码错误");
         }
         if(user.getPassword().equals(user.getNewPassword())){
             throw new MyException(ErrorType.WRONG_INFO,"新密码不能与旧密码相同");
         }
-        u.setPassword(safeUtil.transPassword(user.getNewPassword()));
-        this.updateById(u);
+        ObjFrontUser update = new ObjFrontUser();
+        update.setId(dbUser.getId());
+        update.setPassword(safeUtil.transPassword(user.getNewPassword()));
+        this.updateById(update);
     }
 }

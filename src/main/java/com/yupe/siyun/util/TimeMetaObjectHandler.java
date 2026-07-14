@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
 import org.apache.ibatis.reflection.MetaObject;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Component
@@ -15,7 +16,7 @@ public class TimeMetaObjectHandler implements MetaObjectHandler {
         this.strictInsertFill(metaObject,"collectTime", LocalDateTime.class, LocalDateTime.now());
         this.strictInsertFill(metaObject,"likeTime", LocalDateTime.class, LocalDateTime.now());
         this.strictInsertFill(metaObject,"sendTime", LocalDateTime.class, LocalDateTime.now());
-        this.strictInsertFill(metaObject,"regieterDate", LocalDateTime.class, LocalDateTime.now());
+        this.strictInsertFill(metaObject,"regieterDate", LocalDate.class, LocalDate.now());
         this.strictInsertFill(metaObject,"applyTime", LocalDateTime.class, LocalDateTime.now());
     }
 

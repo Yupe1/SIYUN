@@ -49,7 +49,7 @@ public class CourseVOServiceImpl extends ServiceImpl<CourseVOMapper, JsCourseVO>
         opOrder.setUserId(frontUser.getId());
         opOrder.setEntityId(jsCourse.getId());
         opOrder.setEntityType(1);
-        opOrder.setStatus(4);
+        opOrder.setStatus(1);
         opOrder.setTotalQuantity(1);
         opOrder.setPriceTotal(courseVOMapper.selectById(jsCourse.getId()).getPriceOriginal());
         opOrder.setPricePay(jsCourse.getPriceOriginal());//这里其实是前端选择优惠券计算后的优惠价

@@ -52,7 +52,11 @@ public class WebMvcConfig implements WebMvcConfigurer {
         CorsConfiguration config = new CorsConfiguration();
 
         config.addAllowedOriginPattern("http://localhost:5173");
+        config.addAllowedOriginPattern("http://localhost:5174");
+        config.addAllowedOriginPattern("http://localhost:5175");
         config.addAllowedOriginPattern("http://127.0.0.1:5173");
+        config.addAllowedOriginPattern("http://127.0.0.1:5174");
+        config.addAllowedOriginPattern("http://127.0.0.1:5175");
         config.addAllowedOriginPattern("http://192.168.*.*:5173");
         config.addAllowedOriginPattern("http://10.*.*.*:5173");
 
@@ -90,13 +94,15 @@ public class WebMvcConfig implements WebMvcConfigurer {
         registry.addInterceptor(backAuthInterceptor)
                 .addPathPatterns("/api/admin/**") // 拦截所有后台管理接口
                 // 放行：后台员工登录
-                .excludePathPatterns("/api/admin/sys/login/**");
+                .excludePathPatterns("/api/admin/sys/login/**")
+                .excludePathPatterns("/api/admin/upload/ping/**");
 
         // ==================== ③ 后台管理端：角色动态鉴权拦截器 ====================
         // 这一步紧跟在登录拦截后面，用来根据用户登录的 role 字段判断是否能访问具体的菜单路径
         registry.addInterceptor(backRoleInterceptor)
                 .addPathPatterns("/api/admin/**")
                 .excludePathPatterns("/api/admin/sys/login/**")
+                .excludePathPatterns("/api/admin/upload/ping/**")
                 // 放行：公共的个人信息查看与首页统计通知
                 .excludePathPatterns("/api/admin/home/index-data/**")
                 .excludePathPatterns("/api/admin/profile/**");
