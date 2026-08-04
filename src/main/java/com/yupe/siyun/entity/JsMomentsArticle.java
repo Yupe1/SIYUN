@@ -27,6 +27,7 @@ public class JsMomentsArticle implements Serializable {
     private String title;
     private String keywords;
     private String coverUrl;
+    private String videoUrl;
     private String content;
     private Integer countView;
     private Integer countLike;
@@ -43,4 +44,3 @@ public class JsMomentsArticle implements Serializable {
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
 }
-

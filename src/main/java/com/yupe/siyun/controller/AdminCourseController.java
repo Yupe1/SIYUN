@@ -11,6 +11,7 @@ import com.yupe.siyun.entity.JsCourseCategory;
 import com.yupe.siyun.entity.JsCourseContent;
 import com.yupe.siyun.entity.JsCourseVO;
 import com.yupe.siyun.entity.ObjBackUser;
+import com.yupe.siyun.entity.OpCircleAd;
 import com.yupe.siyun.entity.QfAuditLog;
 import com.yupe.siyun.entity.QfUserRole;
 import com.yupe.siyun.interceptor.RequiresPermission;
@@ -20,6 +21,7 @@ import com.yupe.siyun.mapper.CourseVOMapper;
 import com.yupe.siyun.mapper.JsCourseCategoryMapper;
 import com.yupe.siyun.mapper.JsCourseContentMapper;
 import com.yupe.siyun.mapper.JsCourseMapper;
+import com.yupe.siyun.mapper.OpCircleAdMapper;
 import com.yupe.siyun.mapper.QfUserRoleMapper;
 import com.yupe.siyun.service.FileService;
 import com.yupe.siyun.util.ErrorType;
@@ -29,13 +31,19 @@ import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @RestController
@@ -44,6 +52,8 @@ public class AdminCourseController extends AdminControllerSupport {
 
     @Autowired
     private JsCourseMapper jsCourseMapper;
+    @Autowired
+    private OpCircleAdMapper opCircleAdMapper;
     @Autowired
     private CourseVOMapper courseVOMapper;
     @Autowired
@@ -102,8 +112,10 @@ public class AdminCourseController extends AdminControllerSupport {
     @PostMapping("/courses/import")
     @RequiresPermission("admin:course:import")
     public Object importCourses(@RequestBody List<JsCourse> courses, HttpSession session) {
+        ObjBackUser user = currentUser(session);
         for (JsCourse course : courses) {
-            fillCourseDefaults(course, currentUser(session));
+            if (teacherOnly(session)) course.setTeacherId(user.getId());
+            fillCourseDefaults(course, user);
             jsCourseMapper.insert(course);
         }
         return ResultData.success("课程导入成功");
@@ -136,7 +148,9 @@ public class AdminCourseController extends AdminControllerSupport {
     @PostMapping("/courses")
     @RequiresPermission("admin:course:add")
     public Object addCourse(@RequestBody JsCourse course, HttpSession session) {
-        fillCourseDefaults(course, currentUser(session));
+        ObjBackUser user = currentUser(session);
+        if (teacherOnly(session)) course.setTeacherId(user.getId());
+        fillCourseDefaults(course, user);
         jsCourseMapper.insert(course);
         return ResultData.success("course", course, "课程已提交审核");
     }
@@ -154,6 +168,7 @@ public class AdminCourseController extends AdminControllerSupport {
         }
         ObjBackUser user = currentUser(session);
         JsCourse course = payload.getCourse();
+        if (teacherOnly(session)) course.setTeacherId(user.getId());
         fillCourseDefaults(course, user);
         course.setStatusAudit(1);
         course.setEpisodeNum(contents.size());
@@ -200,13 +215,13 @@ public class AdminCourseController extends AdminControllerSupport {
     }
 
     @PostMapping("/upload/course-cover")
-    @RequiresPermission("admin:course:add")
+    @RequiresPermission({"admin:course:add", "admin:course:update"})
     public Object uploadCourseCover(@RequestParam("file") MultipartFile file) {
         return uploadCourseFile(file, courseCoverPath, "coverUrl", "课程封面上传成功");
     }
 
     @PostMapping("/upload/course-video")
-    @RequiresPermission("admin:course:add")
+    @RequiresPermission({"admin:course:add", "admin:course:update"})
     public Object uploadCourseVideo(@RequestParam("file") MultipartFile file) {
         return uploadCourseFile(file, courseVideoPath, "videoUrl", "课程视频上传成功");
     }
@@ -257,8 +272,10 @@ public class AdminCourseController extends AdminControllerSupport {
         if (old == null) throw new MyException(ErrorType.WRONG_INFO, "课程不存在");
         ensureCourseOwnerIfTeacher(old, session);
         course.setId(id);
+        course.setFrontCreatorId(old.getFrontCreatorId());
         course.setUpdateBy(currentUser(session).getId());
         if (teacherOnly(session)) {
+            course.setTeacherId(old.getTeacherId());
             course.setStatusAudit(1);
             course.setStatusShelf(0);
         }
@@ -266,13 +283,103 @@ public class AdminCourseController extends AdminControllerSupport {
         return ResultData.success("课程已更新");
     }
 
+    @PutMapping("/courses/{id}/with-contents")
+    @RequiresPermission("admin:course:update")
+    @Transactional
+    public Object updateCourseWithContents(@PathVariable Integer id,
+                                           @RequestBody CourseCreatePayload payload,
+                                           HttpSession session) {
+        JsCourse oldCourse = jsCourseMapper.selectById(id);
+        if (oldCourse == null) {
+            throw new MyException(ErrorType.WRONG_INFO, "课程不存在");
+        }
+        ensureCourseOwnerIfTeacher(oldCourse, session);
+        if (payload == null || payload.getCourse() == null) {
+            throw new MyException(ErrorType.WRONG_INFO, "课程信息不能为空");
+        }
+        List<JsCourseContent> contents = payload.getContents() == null
+                ? Collections.emptyList()
+                : payload.getContents();
+        if (contents.isEmpty()) {
+            throw new MyException(ErrorType.WRONG_INFO, "请至少保留一集课程内容");
+        }
+
+        JsCourse course = payload.getCourse();
+        ObjBackUser user = currentUser(session);
+        course.setFrontCreatorId(oldCourse.getFrontCreatorId());
+        if (teacherOnly(session)) {
+            course.setTeacherId(oldCourse.getTeacherId());
+            course.setStatusAudit(1);
+            course.setStatusShelf(0);
+        } else if (course.getTeacherId() == null) {
+            course.setTeacherId(oldCourse.getTeacherId());
+        }
+        if (!hasText(course.getTitle())) {
+            throw new MyException(ErrorType.WRONG_INFO, "课程名称不能为空");
+        }
+        normalizeCourseContents(course, contents);
+        course.setId(id);
+        course.setUpdateBy(user.getId());
+
+        List<JsCourseContent> oldContents = jsCourseContentMapper.selectList(
+                new LambdaQueryWrapper<JsCourseContent>()
+                        .eq(JsCourseContent::getCourseId, id)
+                        .orderByAsc(JsCourseContent::getEpNo)
+        );
+        Map<Integer, JsCourseContent> oldContentMap = new HashMap<>();
+        oldContents.forEach(content -> oldContentMap.put(content.getId(), content));
+        Set<Integer> submittedContentIds = new HashSet<>();
+
+        jsCourseMapper.updateById(course);
+        syncCourseAd(course, oldCourse);
+        for (int i = 0; i < contents.size(); i++) {
+            JsCourseContent content = contents.get(i);
+            content.setCourseId(id);
+            content.setEpNo(i + 1);
+            if (content.getDuration() == null) content.setDuration(0);
+            if (content.getId() == null) {
+                jsCourseContentMapper.insert(content);
+                continue;
+            }
+            JsCourseContent oldContent = oldContentMap.get(content.getId());
+            if (oldContent == null || !submittedContentIds.add(content.getId())) {
+                throw new MyException(ErrorType.WRONG_INFO, "课程分集数据不属于当前课程或存在重复");
+            }
+            jsCourseContentMapper.updateById(content);
+        }
+        for (JsCourseContent oldContent : oldContents) {
+            if (!submittedContentIds.contains(oldContent.getId())) {
+                jsCourseContentMapper.deleteById(oldContent.getId());
+            }
+        }
+
+        Set<String> oldFiles = courseFiles(oldCourse, oldContents);
+        Set<String> newFiles = courseFiles(course, contents);
+        oldFiles.removeAll(newFiles);
+        deleteCourseFilesAfterCommit(oldFiles);
+        return ResultData.success(
+                new String[]{"course", "contents"},
+                new Object[]{course, contents},
+                "课程已更新并重新提交审核"
+        );
+    }
+
     @DeleteMapping("/courses/{id}")
     @RequiresPermission("admin:course:delete")
+    @Transactional
     public Object deleteCourse(@PathVariable Integer id, HttpSession session) {
         JsCourse course = jsCourseMapper.selectById(id);
         if (course == null) throw new MyException(ErrorType.WRONG_INFO, "课程不存在");
         ensureCourseOwnerIfTeacher(course, session);
+        List<JsCourseContent> contents = jsCourseContentMapper.selectList(
+                new LambdaQueryWrapper<JsCourseContent>().eq(JsCourseContent::getCourseId, id)
+        );
+        contents.forEach(content -> jsCourseContentMapper.deleteById(content.getId()));
+        opCircleAdMapper.delete(
+                new LambdaQueryWrapper<OpCircleAd>().eq(OpCircleAd::getCourseId, id)
+        );
         jsCourseMapper.deleteById(id);
+        deleteCourseFilesAfterCommit(courseFiles(course, contents));
         return ResultData.success("课程已删除");
     }
 
@@ -400,5 +507,104 @@ public class AdminCourseController extends AdminControllerSupport {
         Page<CoComment> data = new Page<>(page, size);
         coCommentMapper.selectPage(data, wrapper);
         return ResultData.success("page", data, "课程评论列表");
+    }
+
+    private void normalizeCourseContents(JsCourse course, List<JsCourseContent> contents) {
+        if (course.getTeacherId() == null && course.getFrontCreatorId() == null) {
+            throw new MyException(ErrorType.WRONG_INFO, "请选择讲课教师");
+        }
+        if (course.getCateId() == null) {
+            throw new MyException(ErrorType.WRONG_INFO, "请选择课程分类");
+        }
+        if (course.getPriceOriginal() == null || course.getPriceOriginal().signum() < 0) {
+            throw new MyException(ErrorType.WRONG_INFO, "课程售价配置错误");
+        }
+        int totalDuration = 0;
+        for (int i = 0; i < contents.size(); i++) {
+            JsCourseContent content = contents.get(i);
+            if (!hasText(content.getEpName())) {
+                throw new MyException(ErrorType.WRONG_INFO, "第 " + (i + 1) + " 集名称不能为空");
+            }
+            if (!hasText(content.getVideoUrl())) {
+                throw new MyException(ErrorType.WRONG_INFO, "第 " + (i + 1) + " 集视频文件不能为空");
+            }
+            if (content.getDuration() != null && content.getDuration() < 0) {
+                throw new MyException(ErrorType.WRONG_INFO, "第 " + (i + 1) + " 集时长不能为负数");
+            }
+            totalDuration += content.getDuration() == null ? 0 : content.getDuration();
+        }
+        course.setEpisodeNum(contents.size());
+        if (course.getDuration() == null) course.setDuration(totalDuration);
+        course.setVideoUrl(contents.get(0).getVideoUrl());
+        if (!hasText(course.getKeywords())) course.setKeywords(course.getTitle());
+    }
+
+    private void syncCourseAd(JsCourse course, JsCourse oldCourse) {
+        if (Objects.equals(course.getCoverUrl(), oldCourse.getCoverUrl())
+                && Objects.equals(course.getTitle(), oldCourse.getTitle())
+                && Objects.equals(course.getIntro(), oldCourse.getIntro())) {
+            return;
+        }
+        OpCircleAd update = new OpCircleAd();
+        update.setTitle(course.getTitle());
+        update.setIntro(course.getIntro());
+        update.setPicUrl(hasText(course.getCoverUrl()) ? course.getCoverUrl() : "");
+        if (!hasText(course.getCoverUrl())) update.setStatusShow(0);
+        opCircleAdMapper.update(
+                update,
+                new LambdaQueryWrapper<OpCircleAd>().eq(OpCircleAd::getCourseId, course.getId())
+        );
+    }
+
+    private Set<String> courseFiles(JsCourse course, List<JsCourseContent> contents) {
+        Set<String> files = new HashSet<>();
+        addCourseFile(files, course == null ? null : course.getCoverUrl());
+        addCourseFile(files, course == null ? null : course.getVideoUrl());
+        if (contents != null) {
+            contents.forEach(content -> addCourseFile(files, content.getVideoUrl()));
+        }
+        return files;
+    }
+
+    private void addCourseFile(Set<String> files, String fileUrl) {
+        if (hasText(fileUrl) && fileUrl.startsWith("/uploaded/courses/")) {
+            files.add(fileUrl);
+        }
+    }
+
+    private void deleteCourseFilesAfterCommit(Set<String> files) {
+        if (files == null || files.isEmpty()) return;
+        files.removeIf(this::isCourseFileReferenced);
+        if (files.isEmpty()) return;
+        Runnable deleteFiles = () -> files.forEach(fileService::deletePhysicalFile);
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            deleteFiles.run();
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                deleteFiles.run();
+            }
+        });
+    }
+
+    private boolean isCourseFileReferenced(String fileUrl) {
+        Long courseReferences = jsCourseMapper.selectCount(
+                new LambdaQueryWrapper<JsCourse>()
+                        .eq(JsCourse::getCoverUrl, fileUrl)
+                        .or()
+                        .eq(JsCourse::getVideoUrl, fileUrl)
+        );
+        if (courseReferences != null && courseReferences > 0) return true;
+        Long contentReferences = jsCourseContentMapper.selectCount(
+                new LambdaQueryWrapper<JsCourseContent>()
+                        .eq(JsCourseContent::getVideoUrl, fileUrl)
+        );
+        if (contentReferences != null && contentReferences > 0) return true;
+        Long adReferences = opCircleAdMapper.selectCount(
+                new LambdaQueryWrapper<OpCircleAd>().eq(OpCircleAd::getPicUrl, fileUrl)
+        );
+        return adReferences != null && adReferences > 0;
     }
 }

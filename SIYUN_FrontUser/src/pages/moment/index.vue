@@ -48,7 +48,7 @@
 
 <script setup>
 import { computed, ref } from 'vue'
-import { onPullDownRefresh, onShow } from '@dcloudio/uni-app'
+import { onLoad, onPullDownRefresh, onShow } from '@dcloudio/uni-app'
 import BottomTab from '@/components/BottomTab.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import MomentCard from '@/components/MomentCard.vue'
@@ -61,7 +61,6 @@ import {
   shareMoment,
 } from '@/api/moment'
 import { isNotFoundError, isSessionExpiredError, pickResult } from '@/utils/request'
-import { h5ReplaceTo } from '@/utils/navigation'
 import { useUserStore } from '@/stores/user'
 
 const CURRENT_MOMENT_KEY = 'SIYUN_CURRENT_MOMENT'
@@ -70,9 +69,13 @@ const keyword = ref('')
 const mode = ref('all')
 const moments = ref([])
 
-const isIdentified = computed(() => Boolean(userStore.user?.chinaId))
-const isCreator = computed(() => Number(userStore.user?.createrVerified || 0) === 1)
 const emptyTitle = computed(() => (keyword.value ? '暂无搜索结果' : '暂无微圈'))
+
+onLoad((query = {}) => {
+  if (query.mode === 'mine') {
+    mode.value = 'mine'
+  }
+})
 
 onShow(async () => {
   userStore.hydrate()
@@ -141,32 +144,7 @@ function goPublish() {
     uni.navigateTo({ url: '/pages/auth/login' })
     return
   }
-  if (!isIdentified.value) {
-    uni.showToast({ title: '请先完成实名认证', icon: 'none' })
-    goMine()
-    return
-  }
-  if (!isCreator.value) {
-    goCreatorApply()
-    return
-  }
   uni.navigateTo({ url: '/pages/moment/edit' })
-}
-
-function goMine() {
-  if (h5ReplaceTo('/pages/mine/index')) {
-    return
-  }
-
-  uni.redirectTo({ url: '/pages/mine/index' })
-}
-
-function goCreatorApply() {
-  if (h5ReplaceTo('/pages/moment/creator-apply')) {
-    return
-  }
-
-  uni.navigateTo({ url: '/pages/moment/creator-apply' })
 }
 
 function openMoment(moment) {

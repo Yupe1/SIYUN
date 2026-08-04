@@ -13,7 +13,7 @@ import java.io.Serializable;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("op_coupon")
+@TableName("op_front_user_wallet")
 public class OpFrontUserWallet implements Serializable {
 
     private static final long serialVersionUID = 1L;

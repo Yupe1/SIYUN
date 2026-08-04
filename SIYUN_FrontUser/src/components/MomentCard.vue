@@ -12,6 +12,15 @@
       <view v-if="cover" class="compact-cover">
         <image class="compact-cover-image" :src="cover" mode="aspectFill" />
       </view>
+      <view v-else-if="video" class="compact-cover">
+        <video
+          class="compact-video"
+          :src="video"
+          controls
+          object-fit="cover"
+          @tap.stop
+        />
+      </view>
       <view v-else class="compact-cover placeholder-cover">
         <text class="placeholder-text">暂无封面</text>
       </view>
@@ -22,8 +31,16 @@
         <text>{{ compactNumber(moment.countCollect) }} 收藏</text>
       </view>
     </template>
-    <text v-if="!compact" class="content">{{ moment.content || '暂无内容' }}</text>
+    <rich-text v-if="!compact" class="content" :nodes="moment.content || '暂无内容'" />
     <image v-if="cover && !compact" class="cover" :src="cover" mode="aspectFill" />
+    <video
+      v-if="video && !compact"
+      class="cover moment-video"
+      :src="video"
+      controls
+      object-fit="cover"
+      @tap.stop
+    />
     <view v-if="!compact" class="moment-foot">
       <text>{{ compactNumber(moment.countView) }} 浏览</text>
       <text>{{ compactNumber(moment.countLike) }} 点赞</text>
@@ -64,6 +81,7 @@ const props = defineProps({
 defineEmits(['delete', 'like', 'collect', 'share', 'select'])
 
 const cover = computed(() => assetUrl(props.moment.coverUrl))
+const video = computed(() => assetUrl(props.moment.videoUrl))
 const deletable = computed(() => props.currentUserId && props.currentUserId === props.moment.authorId)
 const avatarText = computed(() => (props.moment.title || '思').slice(0, 1))
 </script>
@@ -169,6 +187,16 @@ const avatarText = computed(() => (props.moment.title || '思').slice(0, 1))
   display: block;
 }
 
+.compact-video {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  background: #1f292e;
+}
+
 .placeholder-cover {
   color: #9aabb1;
   font-size: 24rpx;
@@ -199,6 +227,10 @@ const avatarText = computed(() => (props.moment.title || '思').slice(0, 1))
   margin-top: 18rpx;
   border-radius: 12rpx;
   background: #dce8eb;
+}
+
+.moment-video {
+  background: #1f292e;
 }
 
 .moment-foot {

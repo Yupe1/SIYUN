@@ -13,4 +13,5 @@ public interface ErrorType {
     int PERMISSION_DENIED = 1011;
     int COMMENT_NOT_EXIST = 1012;
     int NO_AUTH_ID = 1013;
+    int BALANCE_NOT_ENOUGH = 1014;
 }

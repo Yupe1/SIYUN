@@ -1,7 +1,7 @@
 <template>
   <view class="page">
     <view class="nav-bar">
-      <button class="nav-back" @tap="goBack">‹ 返回</button>
+      <button class="nav-back" hover-class="none" @tap="goBack">返回</button>
       <text class="nav-title">课程</text>
     </view>
 

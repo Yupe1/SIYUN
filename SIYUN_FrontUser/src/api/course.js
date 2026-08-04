@@ -10,11 +10,21 @@ export function searchCourses(keywords = '') {
   })
 }
 
-export function purchaseCourse(course) {
+export function getCourseDetail(id) {
+  return request({
+    url: `/siyun/course/${id}`,
+    method: 'GET',
+  })
+}
+
+export function purchaseCourse(courseId, couponUserId = null) {
   return request({
     url: '/siyun/order',
     method: 'POST',
-    data: course,
+    data: {
+      courseId,
+      ...(couponUserId ? { couponUserId } : {}),
+    },
     loading: true,
   })
 }
@@ -111,58 +121,5 @@ export function shareCourse(course) {
     url: '/siyun/share',
     method: 'POST',
     data: course,
-  })
-}
-
-export function addComment(courseId, content, parentId = 0) {
-  return request({
-    url: '/siyun/comment',
-    method: 'POST',
-    data: {
-      entityId: courseId,
-      entityType: 0,
-      parentId,
-      content,
-      statusShow: 1,
-      countLike: 0,
-      countReply: 0,
-    },
-    loading: true,
-  })
-}
-
-export function getComments(courseId) {
-  return request({
-    url: '/siyun/comment',
-    method: 'GET',
-    data: {
-      id: courseId,
-    },
-  })
-}
-
-export function getSubComments(commentId) {
-  return request({
-    url: '/siyun/subComment',
-    method: 'GET',
-    data: {
-      id: commentId,
-    },
-  })
-}
-
-export function likeComment(comment) {
-  return request({
-    url: '/siyun/commentLike',
-    method: 'POST',
-    data: comment,
-  })
-}
-
-export function deleteComment(comment) {
-  return request({
-    url: '/siyun/comment',
-    method: 'DELETE',
-    data: comment,
   })
 }

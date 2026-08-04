@@ -90,7 +90,6 @@ onMounted(load)
         <header>用户总览</header>
         <div class="numbers">
           <div><strong>{{ summary.userCount || 0 }}</strong><span>全部用户</span></div>
-          <div><strong>{{ summary.pendingCreatorApply || 0 }}</strong><span>待审申请</span></div>
           <div><strong>{{ summary.pendingCourseAudit || 0 }}</strong><span>待审课程</span></div>
           <div><strong>{{ summary.pendingReturns || 0 }}</strong><span>退货处理</span></div>
         </div>

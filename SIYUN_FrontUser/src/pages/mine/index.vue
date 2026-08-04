@@ -1,139 +1,186 @@
 <template>
   <view class="page mine-page">
-    <view class="top-area">
+    <view class="mine-header">
       <view class="safe-top"></view>
-      <view class="profile">
-        <view class="avatar">{{ avatarText }}</view>
-        <view class="profile-main">
-          <text class="name">{{ userStore.displayName }}</text>
-          <text class="sub">{{ userStore.isLoggedIn ? userStore.user?.stuTel : '登录后同步学习记录' }}</text>
-        </view>
-        <button v-if="!userStore.isLoggedIn" class="login-small" @tap="goLogin">登录</button>
+      <view class="header-title">
+        <text>个人中心</text>
       </view>
     </view>
 
-    <view class="content">
-      <view v-if="userStore.isLoggedIn" class="panel card">
-        <button class="row" @tap="loadCollect">
-          <text>我的课程</text>
-          <text class="row-action">刷新</text>
-        </button>
-        <button class="row" @tap="loadMoments">
-          <text>我的微圈</text>
-          <text class="row-action">刷新</text>
-        </button>
-        <button class="row" @tap="focusIdentity">
-          <text>实名认证</text>
-          <text class="row-action">{{ identityStatusText }}</text>
-        </button>
-        <button class="row" @tap="goCreatorApply">
-          <text>创作者认证</text>
-          <text class="row-action">{{ creatorStatusText }}</text>
-        </button>
-        <button class="row" @tap="goChangePassword">
-          <text>修改密码</text>
-          <text class="row-action">进入</text>
-        </button>
-        <button class="row" @tap="logout">
-          <text>退出登录</text>
-          <text class="row-action danger">退出</text>
-        </button>
-      </view>
-      <view v-else class="panel card guest-actions">
-        <button class="primary-button" @tap="goLogin">登录</button>
-        <button class="secondary-button register" @tap="goRegister">创建账号</button>
-      </view>
-
-      <view v-if="userStore.isLoggedIn" class="identity-card card">
-        <view class="identity-head">
-          <text class="identity-title">实名认证</text>
-          <text class="identity-status">{{ identityStatusText }}</text>
-        </view>
-        <text class="identity-desc">
-          {{ isIdentified ? '实名信息已提交，可继续申请创作者认证。' : '提交身份证号后才能申请创作者认证。' }}
+    <view class="profile-card">
+      <image v-if="avatarUrl" class="avatar image-avatar" :src="avatarUrl" mode="aspectFill" />
+      <view v-else class="avatar">{{ avatarText }}</view>
+      <view class="profile-main">
+        <text class="name">{{ userStore.displayName }}</text>
+        <text class="account">
+          {{ userStore.isLoggedIn ? `账号：${userStore.user?.stuTel || '--'}` : '登录后同步你的学习与创作' }}
         </text>
-        <template v-if="!isIdentified">
-          <input
-            v-model.trim="identityForm.chinaId"
-            class="identity-input"
-            placeholder="身份证号码"
-            placeholder-class="placeholder"
-          />
-          <button class="identity-submit" @tap="submitIdentity">提交实名</button>
-        </template>
+        <text v-if="userStore.isLoggedIn" class="signature">
+          {{ userStore.user?.remark || '认真学习，保持热爱。' }}
+        </text>
       </view>
-
-      <view class="section-head">
-        <text class="section-title">我的课程</text>
-      </view>
-      <CourseCard
-        v-for="course in collects"
-        :key="course.id"
-        :course="course"
-        @select="openCourse"
-      />
-      <EmptyState v-if="userStore.isLoggedIn && !collects.length" title="暂无课程" />
-
-      <view class="section-head moment-head">
-        <text class="section-title">我的微圈</text>
-        <button class="section-action" @tap="goPublish">发布</button>
-      </view>
-      <MomentCard
-        v-for="item in myMoments"
-        :key="item.id"
-        :moment="item"
-        :current-user-id="userStore.user?.id || 0"
-        @delete="removeMoment"
-      />
-      <EmptyState v-if="userStore.isLoggedIn && !myMoments.length" title="暂无微圈" />
+      <button v-if="!userStore.isLoggedIn" class="login-button" @tap="goLogin">登录</button>
     </view>
+
+    <view v-if="userStore.isLoggedIn" class="stat-strip">
+      <view class="stat-item" @tap="goPage('/pages/mine/history')">
+        <text class="stat-value">{{ overview.studyDuration || 0 }}</text>
+        <text class="stat-label">学习分钟</text>
+      </view>
+      <view class="stat-item" @tap="goPage('/pages/mine/orders')">
+        <text class="stat-value">{{ overview.orderCount || 0 }}</text>
+        <text class="stat-label">全部订单</text>
+      </view>
+      <view class="stat-item" @tap="goPage('/pages/mine/coupons')">
+        <text class="stat-value">{{ overview.couponCount || 0 }}</text>
+        <text class="stat-label">优惠券</text>
+      </view>
+    </view>
+
+    <view class="menu-section">
+      <button v-for="item in mainMenus" :key="item.key" class="menu-row" @tap="openMenu(item)">
+        <view class="menu-icon"><image class="menu-icon-image" :src="item.icon" mode="aspectFit" /></view>
+        <text class="menu-title">{{ item.title }}</text>
+        <text v-if="item.badge" class="menu-extra">{{ item.badge }}</text>
+        <text class="menu-arrow">›</text>
+      </button>
+    </view>
+
+    <view class="menu-section secondary-menu">
+      <button v-for="item in serviceMenus" :key="item.key" class="menu-row" @tap="openMenu(item)">
+        <view class="menu-icon pale"><image class="menu-icon-image" :src="item.icon" mode="aspectFit" /></view>
+        <text class="menu-title">{{ item.title }}</text>
+        <text v-if="item.badge" class="menu-extra">{{ item.badge }}</text>
+        <text class="menu-arrow">›</text>
+      </button>
+    </view>
+
+    <view v-if="!userStore.isLoggedIn" class="guest-actions">
+      <button class="primary-button" @tap="goLogin">登录</button>
+      <button class="secondary-button register" @tap="goRegister">创建账号</button>
+    </view>
+    <button v-else class="logout-button" @tap="logout">退出账号</button>
 
     <BottomTab active="mine" />
   </view>
 </template>
 
 <script setup>
-import { computed, reactive, ref } from 'vue'
+import { computed, reactive } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import BottomTab from '@/components/BottomTab.vue'
-import CourseCard from '@/components/CourseCard.vue'
-import EmptyState from '@/components/EmptyState.vue'
-import MomentCard from '@/components/MomentCard.vue'
-import { getMyCollect } from '@/api/course'
-import { deleteMoment, getMyMoments } from '@/api/moment'
-import { h5ReplaceTo } from '@/utils/navigation'
+import { getMineOverview } from '@/api/mine'
+import { assetUrl } from '@/utils/format'
 import { isNotFoundError, isSessionExpiredError, pickResult } from '@/utils/request'
 import { useUserStore } from '@/stores/user'
 
-const CURRENT_COURSE_KEY = 'SIYUN_CURRENT_COURSE'
 const userStore = useUserStore()
-const collects = ref([])
-const myMoments = ref([])
-const identityForm = reactive({
-  chinaId: '',
+const overview = reactive({
+  studyDuration: 0,
+  wallet: 0,
+  orderCount: 0,
+  couponCount: 0,
 })
+
 const avatarText = computed(() => (userStore.displayName || '思').slice(0, 1))
+const avatarUrl = computed(() => assetUrl(userStore.user?.avataUrl))
 const isIdentified = computed(() => Boolean(userStore.user?.chinaId))
-const identityStatusText = computed(() => (isIdentified.value ? '已实名' : '未实名'))
-const creatorStatusText = computed(() => (Number(userStore.user?.createrVerified || 0) === 1 ? '已通过' : '去申请'))
+const isCreator = computed(() => Number(userStore.user?.createrVerified || 0) === 1)
 
-onShow(() => {
-  hydrateAndLoad()
+const mainMenus = computed(() => [
+  { key: 'wallet', icon: '/static/icons/wallet.svg', title: '钱包', url: '/pages/mine/wallet', auth: true, badge: `余额 ${moneyText(overview.wallet)}` },
+  { key: 'creation', icon: '/static/icons/creation.svg', title: '我的创作', url: '/pages/mine/creations', auth: true },
+  { key: 'collects', icon: '/static/icons/favorite.svg', title: '我的收藏', url: '/pages/mine/collects', auth: true },
+  { key: 'store', icon: '/static/icons/store.svg', title: '微商城', url: '/pages/store/index' },
+])
+
+const serviceMenus = computed(() => [
+  {
+    key: 'identity',
+    icon: '/static/icons/identity.svg',
+    title: '实名认证',
+    url: '/pages/mine/identity',
+    auth: true,
+    badge: isIdentified.value ? '已实名' : '未实名',
+  },
+  {
+    key: 'creator',
+    icon: '/static/icons/creator.svg',
+    title: '创作者认证中心',
+    action: 'creator',
+    auth: true,
+    badge: isCreator.value ? '已通过' : '去认证',
+  },
+  { key: 'video', icon: '/static/icons/video.svg', title: '上传视频课程', action: 'video', auth: true },
+  { key: 'feedback', icon: '/static/icons/feedback.svg', title: '意见反馈', url: '/pages/mine/feedback', auth: true },
+  { key: 'service', icon: '/static/icons/service.svg', title: '在线客服', url: '/pages/mine/service', auth: true },
+  { key: 'password', icon: '/static/icons/password.svg', title: '修改密码', url: '/pages/auth/change-password', auth: true },
+])
+
+onShow(async () => {
+  userStore.hydrate()
+  if (!userStore.isLoggedIn) {
+    resetOverview()
+    return
+  }
+
+  // 用户资料刷新与统计查询互不依赖，资料接口偶发失败时也必须刷新创作数等统计。
+  try {
+    await userStore.refresh()
+  } catch (error) {
+    if (!isSessionExpiredError(error) && !isNotFoundError(error)) {
+      uni.showToast({ title: error.message || '用户状态刷新失败', icon: 'none' })
+    }
+  }
+
+  if (!userStore.isLoggedIn) {
+    resetOverview()
+    return
+  }
+
+  try {
+    const response = await getMineOverview()
+    Object.assign(overview, pickResult(response, 'overview', {}))
+  } catch (error) {
+    if (!isSessionExpiredError(error) && !isNotFoundError(error)) {
+      uni.showToast({ title: error.message || '个人数据加载失败', icon: 'none' })
+    }
+  }
+
 })
 
-async function hydrateAndLoad() {
-  userStore.hydrate()
-  if (userStore.isLoggedIn) {
-    try {
-      await userStore.refresh()
-    } catch (error) {
-      if (!isSessionExpiredError(error) && !isNotFoundError(error)) {
-        uni.showToast({ title: error.message || '用户状态刷新失败', icon: 'none' })
-      }
-    }
-    loadCollect()
-    loadMoments()
+function moneyText(value) {
+  const number = Number(value || 0)
+  return Number.isFinite(number) ? number.toFixed(2) : '0.00'
+}
+
+function resetOverview() {
+  Object.assign(overview, {
+    studyDuration: 0,
+    wallet: 0,
+    orderCount: 0,
+    couponCount: 0,
+  })
+}
+
+function openMenu(item) {
+  if (item.auth && !userStore.isLoggedIn) {
+    goLogin()
+    return
   }
+  if (item.action === 'creator') {
+    goCreatorApply()
+    return
+  }
+  if (item.action === 'video') {
+    goVideoUpload()
+    return
+  }
+  goPage(item.url)
+}
+
+function goPage(url) {
+  uni.navigateTo({ url })
 }
 
 function goLogin() {
@@ -144,119 +191,31 @@ function goRegister() {
   uni.navigateTo({ url: '/pages/auth/register' })
 }
 
-function goChangePassword() {
-  uni.navigateTo({ url: '/pages/auth/change-password' })
-}
-
-function focusIdentity() {
-  if (isIdentified.value) {
-    uni.showToast({ title: '已完成实名认证', icon: 'none' })
-    return
-  }
-  uni.showToast({ title: '请填写身份证号码', icon: 'none' })
-}
-
 function goCreatorApply() {
   if (!isIdentified.value) {
     uni.showToast({ title: '请先完成实名认证', icon: 'none' })
+    goPage('/pages/mine/identity')
     return
   }
-  if (h5ReplaceTo('/pages/moment/creator-apply')) {
-    return
-  }
-
-  uni.navigateTo({ url: '/pages/moment/creator-apply' })
+  goPage('/pages/moment/creator-apply')
 }
 
-function goPublish() {
-  if (!userStore.isLoggedIn) {
-    goLogin()
-    return
-  }
-  if (!isIdentified.value || Number(userStore.user?.createrVerified || 0) !== 1) {
+function goVideoUpload() {
+  if (!isIdentified.value || !isCreator.value) {
+    uni.showToast({ title: '通过创作者认证后才能上传视频课程', icon: 'none' })
     goCreatorApply()
     return
   }
-  uni.navigateTo({ url: '/pages/moment/edit' })
-}
-
-async function submitIdentity() {
-  if (!identityForm.chinaId) {
-    uni.showToast({ title: '请输入身份证号码', icon: 'none' })
-    return
-  }
-  if (!/^\d{15}$|^\d{17}[\dXx]$/.test(identityForm.chinaId)) {
-    uni.showToast({ title: '身份证号码格式不正确', icon: 'none' })
-    return
-  }
-  try {
-    await userStore.identify({ chinaId: identityForm.chinaId })
-    identityForm.chinaId = ''
-    uni.showToast({ title: '实名成功', icon: 'success' })
-  } catch (error) {
-    uni.showToast({ title: error.message || '提交失败', icon: 'none' })
-  }
+  goPage('/pages/mine/video-upload')
 }
 
 async function logout() {
   try {
     await userStore.logout()
-    collects.value = []
-    myMoments.value = []
+    resetOverview()
     uni.showToast({ title: '已退出', icon: 'success' })
   } catch (error) {
     uni.showToast({ title: error.message || '退出失败', icon: 'none' })
-  }
-}
-
-async function loadCollect() {
-  if (!userStore.isLoggedIn) {
-    return
-  }
-  try {
-    const response = await getMyCollect()
-    collects.value = pickResult(response, 'myCollect', [])
-  } catch (error) {
-    collects.value = []
-    if (!isSessionExpiredError(error) && !isNotFoundError(error)) {
-      uni.showToast({ title: error.message || '加载失败', icon: 'none' })
-    }
-  }
-}
-
-async function loadMoments() {
-  if (!userStore.isLoggedIn) {
-    return
-  }
-  if (!isIdentified.value) {
-    myMoments.value = []
-    return
-  }
-  try {
-    const response = await getMyMoments()
-    myMoments.value = pickResult(response, 'myMoments', [])
-  } catch (error) {
-    myMoments.value = []
-    if (!isSessionExpiredError(error) && !isNotFoundError(error)) {
-      uni.showToast({ title: error.message || '加载失败', icon: 'none' })
-    }
-  }
-}
-
-function openCourse(course) {
-  uni.setStorageSync(CURRENT_COURSE_KEY, course)
-  uni.navigateTo({
-    url: `/pages/course/detail?id=${course.id}`,
-  })
-}
-
-async function removeMoment(moment) {
-  try {
-    await deleteMoment(moment)
-    myMoments.value = myMoments.value.filter((item) => item.id !== moment.id)
-    uni.showToast({ title: '已删除', icon: 'success' })
-  } catch (error) {
-    uni.showToast({ title: error.message || '删除失败', icon: 'none' })
   }
 }
 </script>
@@ -264,162 +223,237 @@ async function removeMoment(moment) {
 <style scoped>
 .mine-page {
   background: #f4f8f8;
+  padding-bottom: 190rpx;
 }
 
-.top-area {
-  background: #42c6b2;
+.mine-header {
+  height: calc(var(--status-bar-height) + 116rpx);
+  background: #20bea3;
   color: #ffffff;
-  padding-bottom: 34rpx;
 }
 
-.profile {
-  min-height: 136rpx;
-  padding: 20rpx 28rpx 0;
+.header-title {
+  height: 96rpx;
+  padding: 0 24rpx;
   display: flex;
   align-items: center;
+  justify-content: center;
+  position: relative;
+  font-size: 32rpx;
+  font-weight: 800;
+}
+
+.profile-card {
+  width: calc(100% - 48rpx);
+  min-height: 190rpx;
+  margin: 20rpx 24rpx 0;
+  padding: 28rpx;
+  border-radius: 22rpx;
+  background: #ffffff;
+  box-shadow: 0 12rpx 34rpx rgba(34, 74, 77, 0.09);
+  display: flex;
+  align-items: center;
+  position: relative;
+  z-index: 2;
 }
 
 .avatar {
-  width: 104rpx;
-  height: 104rpx;
-  border-radius: 52rpx;
-  background: #ffffff;
+  flex: 0 0 auto;
+  width: 116rpx;
+  height: 116rpx;
+  border-radius: 24rpx;
+  background: #e2f8f4;
   color: #18bda4;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 46rpx;
+  font-size: 48rpx;
   font-weight: 900;
+}
+
+.image-avatar {
+  display: block;
 }
 
 .profile-main {
   flex: 1;
   min-width: 0;
-  margin-left: 20rpx;
+  margin-left: 24rpx;
 }
 
-.name {
+.name,
+.account,
+.signature {
   display: block;
-  max-width: 360rpx;
-  font-size: 34rpx;
-  line-height: 44rpx;
-  font-weight: 900;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.sub {
-  display: block;
-  margin-top: 8rpx;
-  color: rgba(255, 255, 255, 0.78);
-  font-size: 24rpx;
+.name {
+  color: #233138;
+  font-size: 32rpx;
+  font-weight: 900;
 }
 
-.login-small {
-  width: 116rpx;
+.account {
+  margin-top: 10rpx;
+  color: #7f8d93;
+  font-size: 23rpx;
+}
+
+.signature {
+  margin-top: 8rpx;
+  color: #9aa6ab;
+  font-size: 22rpx;
+}
+
+.login-button {
+  width: 108rpx;
   height: 60rpx;
   border-radius: 30rpx;
-  background: rgba(255, 255, 255, 0.22);
+  background: #20bea3;
   color: #ffffff;
-  font-size: 26rpx;
+  font-size: 25rpx;
   font-weight: 800;
 }
 
-.panel {
-  padding: 8rpx 24rpx;
-  margin-bottom: 26rpx;
+.stat-strip {
+  width: calc(100% - 48rpx);
+  margin: 20rpx 24rpx;
+  padding: 22rpx 0;
+  border-radius: 18rpx;
+  background: #ffffff;
+  display: flex;
+  box-shadow: 0 8rpx 24rpx rgba(34, 74, 77, 0.05);
 }
 
-.row {
-  height: 88rpx;
+.stat-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border-right: 1rpx solid #edf2f2;
+}
+
+.stat-item:last-child {
+  border-right: 0;
+}
+
+.stat-value {
+  color: #20b99f;
+  font-size: 32rpx;
+  line-height: 40rpx;
+  font-weight: 900;
+}
+
+.stat-label {
+  margin-top: 7rpx;
+  color: #88959a;
+  font-size: 22rpx;
+}
+
+.menu-section {
+  width: calc(100% - 48rpx);
+  margin: 20rpx 24rpx 0;
+  padding: 0 22rpx;
+  border-radius: 18rpx;
+  background: #ffffff;
+  box-shadow: 0 8rpx 24rpx rgba(34, 74, 77, 0.05);
+  overflow: hidden;
+}
+
+.secondary-menu {
+  margin-top: 20rpx;
+}
+
+.menu-row {
+  width: 100%;
+  min-width: 0;
+  height: 94rpx;
   display: flex;
   align-items: center;
-  justify-content: space-between;
   border-bottom: 1rpx solid #edf1f2;
-  color: #263238;
-  font-size: 28rpx;
+  border-radius: 0;
+  background: transparent;
+  overflow: hidden;
+  text-align: left;
 }
 
-.row:last-child {
+.menu-row::after {
+  border: 0;
+}
+
+.menu-row:last-child {
   border-bottom: 0;
 }
 
-.row-action {
+.menu-icon {
+  width: 50rpx;
+  height: 50rpx;
+  border-radius: 15rpx;
+  background: #e5f8f4;
   color: #18bda4;
-  font-size: 24rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22rpx;
+  font-weight: 900;
 }
 
-.danger {
-  color: #f06b4f;
+.menu-icon.pale {
+  background: #f0f7f6;
+}
+
+.menu-icon-image {
+  display: block;
+  width: 30rpx;
+  height: 30rpx;
+}
+
+.menu-title {
+  flex: 1;
+  margin-left: 20rpx;
+  color: #2d3a40;
+  font-size: 27rpx;
+}
+
+.menu-extra {
+  max-width: 240rpx;
+  overflow: hidden;
+  color: #909da2;
+  font-size: 22rpx;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.menu-arrow {
+  margin-left: 14rpx;
+  color: #b0bbbf;
+  font-size: 38rpx;
 }
 
 .guest-actions {
+  width: calc(100% - 48rpx);
+  margin: 28rpx 24rpx 0;
   padding: 24rpx;
+  border-radius: 18rpx;
+  background: #ffffff;
 }
 
 .register {
   margin-top: 18rpx;
 }
 
-.identity-card {
-  padding: 24rpx;
-  margin-bottom: 26rpx;
-}
-
-.identity-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.identity-title {
-  color: #263238;
-  font-size: 30rpx;
+.logout-button {
+  width: calc(100% - 48rpx);
+  height: 78rpx;
+  margin: 28rpx 24rpx 0;
+  border-radius: 39rpx;
+  background: #ffffff;
+  color: #ed6f58;
+  font-size: 27rpx;
   font-weight: 800;
-}
-
-.identity-status {
-  color: #18bda4;
-  font-size: 24rpx;
-  font-weight: 800;
-}
-
-.identity-desc {
-  display: block;
-  margin-top: 12rpx;
-  color: #7d8b91;
-  font-size: 24rpx;
-  line-height: 36rpx;
-}
-
-.identity-input {
-  width: 100%;
-  height: 76rpx;
-  margin-top: 18rpx;
-  padding: 0 20rpx;
-  border-radius: 10rpx;
-  background: #f4f8f8;
-  color: #263238;
-  font-size: 26rpx;
-  box-sizing: border-box;
-}
-
-.identity-submit {
-  height: 70rpx;
-  margin-top: 18rpx;
-  border-radius: 35rpx;
-  background: #18c6a6;
-  color: #ffffff;
-  font-size: 26rpx;
-  font-weight: 800;
-}
-
-.placeholder {
-  color: #aab5ba;
-}
-
-.moment-head {
-  margin-top: 34rpx;
+  box-shadow: 0 8rpx 24rpx rgba(34, 74, 77, 0.05);
 }
 </style>

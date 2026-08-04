@@ -28,6 +28,7 @@ export const menuGroups = [
       { title: '微圈管理', path: '/moments/list', perms: ['admin:moment:list'] },
       { title: '添加微圈', path: '/moments/create', perms: ['admin:moment:add'] },
       { title: '微圈审核', path: '/moments/audit', perms: ['admin:moment:audit'] },
+      { title: '微圈评论', path: '/moments/comments', perms: ['admin:comment:list'] },
     ],
   },
   {
@@ -60,7 +61,9 @@ export const menuGroups = [
     base: '/marketing',
     children: [
       { title: '优惠券列表', path: '/marketing/coupons', perms: ['admin:coupon:list'] },
-      { title: '优惠券查询', path: '/marketing/coupon-users', perms: ['admin:coupon:user'] },
+      { title: '优惠券关联查询', path: '/marketing/coupon-goods', perms: ['admin:coupon:user'] },
+      { title: '商品/课程优惠券', path: '/marketing/coupon-goods/create', perms: ['admin:coupon:goods:add'] },
+      { title: '赠送优惠券', path: '/marketing/coupon-grant', perms: ['admin:coupon:grant'] },
       { title: '轮播图列表', path: '/marketing/ads', perms: ['admin:ad:list'] },
     ],
   },
@@ -72,7 +75,9 @@ export const menuGroups = [
     children: [
       { title: '审核日志', path: '/audit-stat/audit-logs', perms: ['admin:audit:log'] },
       { title: '评论管理', path: '/audit-stat/comments', perms: ['admin:comment:list'] },
-      { title: '运营统计', path: '/audit-stat/statistics', perms: ['admin:stats:view'] },
+      { title: '创作者审核', path: '/audit-stat/creator-audit', perms: ['admin:apply:list'] },
+      { title: '问题反馈', path: '/audit-stat/feedback', perms: ['admin:feedback:list'] },
+      { title: '在线客服', path: '/audit-stat/service', perms: ['admin:service:list'] },
     ],
   },
   {
@@ -93,8 +98,9 @@ export const menuGroups = [
     children: [
       { title: '前台用户', path: '/hr/front-users', perms: ['admin:user:list'] },
       { title: '教师人员', path: '/hr/staff-users', perms: ['admin:staff:list'] },
+      { title: '运营人员', path: '/hr/operator-users', perms: ['admin:staff:list'] },
+      { title: '人事人员', path: '/hr/hr-users', perms: ['admin:staff:list'] },
       { title: '部门管理', path: '/hr/depts', perms: ['admin:dept:list'] },
-      { title: '作品申请', path: '/hr/position-applies', perms: ['admin:apply:list'] },
     ],
   },
 ]

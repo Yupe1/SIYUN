@@ -65,7 +65,7 @@ public class BackRoleInterceptor implements HandlerInterceptor {
                     hasPermission = true;
                     break;
                 }
-            }
+            }   
 
             if (!hasPermission) {
                 throw new MyException(ErrorType.PERMISSION_DENIED, "对不起，您无权操作此功能");

@@ -25,6 +25,7 @@ public class OpCircleAd implements Serializable {
     @TableId(value = "id", type = IdType.AUTO)
     private Integer id;
 
+    private Integer courseId;
     private String picUrl;
     private String title;
     //1首页顶部 2商城首页 3微圈顶部
@@ -38,4 +39,3 @@ public class OpCircleAd implements Serializable {
     private Integer createBy;
     private String remark;
 }
-

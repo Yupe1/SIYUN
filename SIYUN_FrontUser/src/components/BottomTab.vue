@@ -53,13 +53,15 @@ function go(item) {
   position: fixed;
   left: 0;
   right: 0;
-  bottom: calc(18rpx + env(safe-area-inset-bottom));
+  bottom: 0;
   z-index: 20;
-  height: 94rpx;
-  padding: 0 44rpx;
-  background: transparent;
+  height: calc(112rpx + env(safe-area-inset-bottom));
+  padding: 10rpx 44rpx env(safe-area-inset-bottom);
+  background: #ffffff;
+  border-top: 1rpx solid #e7eeee;
+  box-shadow: 0 -10rpx 28rpx rgba(31, 58, 66, 0.08);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
 }
 

@@ -14,7 +14,6 @@ public class StaffPayload {
     private Integer gender;
     private String avataUrl;
     private String email;
-    private String password;
     private String tel;
     private String chinaId;
     private LocalDate birth;
@@ -33,7 +32,6 @@ public class StaffPayload {
         user.setGender(gender);
         user.setAvataUrl(avataUrl);
         user.setEmail(email);
-        user.setPassword(password);
         user.setTel(tel);
         user.setChinaId(chinaId);
         user.setBirth(birth);

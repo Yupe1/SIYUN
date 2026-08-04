@@ -1,4 +1,4 @@
-import { request } from '@/utils/request'
+import { request, uploadFile } from '@/utils/request'
 
 export function getMoment(id) {
   return request({
@@ -33,6 +33,14 @@ export function addMoment(data) {
   })
 }
 
+export function uploadMomentImage(filePath, onProgress) {
+  return uploadFile({
+    url: '/siyun/upload/moment-image',
+    filePath,
+    onProgress,
+  })
+}
+
 export function deleteMoment(moment) {
   return request({
     url: '/siyun/moment',
@@ -64,6 +72,22 @@ export function collectMoment(moment) {
     url: '/siyun/collectMoment',
     method: 'POST',
     data: moment,
+  })
+}
+
+export function getMomentLikeStatus(momentId) {
+  return request({
+    url: '/siyun/moment/likeStatus',
+    method: 'GET',
+    data: { momentId },
+  })
+}
+
+export function getMomentCollectStatus(momentId) {
+  return request({
+    url: '/siyun/moment/collectStatus',
+    method: 'GET',
+    data: { momentId },
   })
 }
 

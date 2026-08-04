@@ -1,14 +1,14 @@
 <template>
   <view class="apply-page">
     <view class="nav-bar">
-      <button class="nav-back" @tap="goBack">‹ 返回</button>
+      <button class="nav-back" hover-class="none" @tap="goBack">返回</button>
       <text class="nav-title">创作者认证</text>
     </view>
 
     <view class="content">
       <view class="card apply-card">
         <view class="head">
-          <text class="title">申请发布微圈</text>
+          <text class="title">申请上传视频课程</text>
           <text class="status">{{ statusText }}</text>
         </view>
         <text class="desc">{{ hint }}</text>
@@ -24,14 +24,14 @@
           <input
             v-model.trim="form.fileUrl"
             class="input"
-            placeholder="作品或主页地址"
+            placeholder="课程样例或作品地址（选填）"
             placeholder-class="placeholder"
           />
           <button class="primary-button submit" @tap="submit">提交申请</button>
         </template>
 
         <button v-else-if="!isIdentified" class="primary-button submit" @tap="goMine">去实名认证</button>
-        <button v-else class="primary-button submit" @tap="goMoment">返回微圈</button>
+        <button v-else class="primary-button submit" @tap="goVideoUpload">去上传视频课程</button>
       </view>
     </view>
   </view>
@@ -68,12 +68,12 @@ const hint = computed(() => {
     return '登录后才能申请创作者认证。'
   }
   if (!isIdentified.value) {
-    return '发布微圈前需要先完成实名认证。'
+    return '上传视频课程前需要先完成实名认证。'
   }
   if (isCreator.value) {
-    return '你已经通过创作者认证，可以直接发布微圈。'
+    return '你已经通过创作者认证，可以上传视频课程。'
   }
-  return '提交创作者认证申请，后台审核通过后即可发布微圈。'
+  return '提交创作者认证申请，后台审核通过后即可上传视频课程。'
 })
 
 onLoad(async () => {
@@ -93,15 +93,15 @@ onLoad(async () => {
 
 function goBack() {
   uni.navigateBack({
-    fail: goMoment,
+    fail: goMine,
   })
 }
 
-function goMoment() {
-  if (h5ReplaceTo('/pages/moment/index')) {
+function goVideoUpload() {
+  if (h5ReplaceTo('/pages/mine/video-upload')) {
     return
   }
-  uni.redirectTo({ url: '/pages/moment/index' })
+  uni.redirectTo({ url: '/pages/mine/video-upload' })
 }
 
 function goMine() {
@@ -124,7 +124,7 @@ async function submit() {
     form.applyReason = ''
     form.fileUrl = ''
     uni.showToast({ title: '已提交审核', icon: 'success' })
-    setTimeout(goMoment, 500)
+    setTimeout(goMine, 500)
   } catch (error) {
     uni.showToast({ title: error.message || '提交失败', icon: 'none' })
   }

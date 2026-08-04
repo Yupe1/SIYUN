@@ -1,7 +1,7 @@
 <template>
   <view class="detail-page">
     <view class="nav-bar">
-      <button class="nav-back" @tap="goBack">‹ 返回</button>
+      <button class="nav-back" hover-class="none" @tap="goBack">返回</button>
       <text class="nav-title">微圈详情</text>
     </view>
 
@@ -13,16 +13,34 @@
           <!-- <text>{{ compactNumber(moment.countView) }} 浏览</text> -->
         </view>
         <image v-if="cover" class="cover" :src="cover" mode="aspectFill" />
-        <text class="article">{{ moment.content || '暂无内容' }}</text>
+        <video v-if="video" class="cover detail-video" :src="video" controls object-fit="cover" />
+        <rich-text class="article rich-article" :nodes="moment.content || '暂无内容'" />
         <view class="stats">
           <text>{{ compactNumber(moment.countLike) }} 点赞</text>
-          <!-- <text>{{ compactNumber(moment.countComment) }} 评论</text> -->
+          <text>{{ compactNumber(moment.countComment) }} 评论</text>
           <text>{{ compactNumber(moment.countCollect) }} 收藏</text>
         </view>
         <view class="actions">
-          <button class="action" @tap="handleLike">点赞</button>
-          <button class="action" @tap="handleCollect">收藏</button>
-          <button class="action" @tap="handleShare">分享</button>
+          <button class="action" :class="{ 'like-active': liked }" @tap="handleLike">
+            <text class="action-icon">{{ liked ? '♥' : '♡' }}</text>
+            <text>点赞</text>
+          </button>
+          <button class="action" :class="{ 'collect-active': collected }" @tap="handleCollect">
+            <text class="action-icon">{{ collected ? '★' : '☆' }}</text>
+            <text>收藏</text>
+          </button>
+          <button class="action share-action" @tap="handleShare">
+            <text class="action-icon share-icon">↗</text>
+            <text>分享</text>
+          </button>
+        </view>
+        <view class="comment-section">
+          <text class="comment-title">评论</text>
+          <CommentThread
+            :entity-id="Number(moment.id)"
+            :entity-type="2"
+            @change="handleCommentChange"
+          />
         </view>
       </view>
       <EmptyState v-else title="微圈不存在" />
@@ -34,16 +52,28 @@
 import { computed, ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import EmptyState from '@/components/EmptyState.vue'
-import { collectMoment, getMoment, likeMoment, shareMoment } from '@/api/moment'
+import CommentThread from '@/components/CommentThread.vue'
+import {
+  collectMoment,
+  getMoment,
+  getMomentCollectStatus,
+  getMomentLikeStatus,
+  likeMoment,
+  shareMoment,
+} from '@/api/moment'
 import { assetUrl, compactNumber, dateText } from '@/utils/format'
 import { h5ReplaceTo } from '@/utils/navigation'
 import { isSessionExpiredError, pickResult } from '@/utils/request'
+import { showShareDialog } from '@/utils/share'
 import { useUserStore } from '@/stores/user'
 
 const CURRENT_MOMENT_KEY = 'SIYUN_CURRENT_MOMENT'
 const userStore = useUserStore()
 const moment = ref(null)
+const liked = ref(false)
+const collected = ref(false)
 const cover = computed(() => assetUrl(moment.value?.coverUrl))
+const video = computed(() => assetUrl(moment.value?.videoUrl))
 
 onLoad((query = {}) => {
   userStore.hydrate()
@@ -53,8 +83,27 @@ onLoad((query = {}) => {
   }
   if (query.id) {
     loadMoment(query.id)
+    loadActionStatus(query.id)
   }
 })
+
+async function loadActionStatus(id) {
+  if (!userStore.isLoggedIn) {
+    liked.value = false
+    collected.value = false
+    return
+  }
+  const [likeResult, collectResult] = await Promise.allSettled([
+    getMomentLikeStatus(id),
+    getMomentCollectStatus(id),
+  ])
+  liked.value = likeResult.status === 'fulfilled'
+    ? Boolean(pickResult(likeResult.value, 'liked', false))
+    : false
+  collected.value = collectResult.status === 'fulfilled'
+    ? Boolean(pickResult(collectResult.value, 'collected', false))
+    : false
+}
 
 async function loadMoment(id) {
   try {
@@ -122,8 +171,9 @@ async function handleLike() {
   }
   try {
     await likeMoment(moment.value)
+    liked.value = !liked.value
     await loadMoment(moment.value.id)
-    uni.showToast({ title: '已操作', icon: 'success' })
+    uni.showToast({ title: liked.value ? '已点赞' : '已取消点赞', icon: 'success' })
   } catch (error) {
     handleActionError(error, '操作失败')
   }
@@ -134,9 +184,16 @@ async function handleCollect() {
     return
   }
   try {
-    await collectMoment(moment.value)
-    await loadMoment(moment.value.id)
-    uni.showToast({ title: '已操作', icon: 'success' })
+    const response = await collectMoment(moment.value)
+    collected.value = Boolean(pickResult(response, 'collected', !collected.value))
+    const nextCount = pickResult(response, 'countCollect', null)
+    if (nextCount !== null) {
+      moment.value.countCollect = Math.max(0, Number(nextCount || 0))
+      setMoment({ ...moment.value })
+    } else {
+      await loadMoment(moment.value.id)
+    }
+    uni.showToast({ title: collected.value ? '已收藏' : '已取消收藏', icon: 'success' })
   } catch (error) {
     handleActionError(error, '操作失败')
   }
@@ -148,10 +205,16 @@ async function handleShare() {
   }
   try {
     await shareMoment(moment.value)
-    uni.showToast({ title: '已分享', icon: 'success' })
+    showShareDialog(`/pages/moment/detail?id=${moment.value.id}`, '分享微圈')
   } catch (error) {
     handleActionError(error, '分享失败')
   }
+}
+
+function handleCommentChange(delta) {
+  if (!moment.value) return
+  moment.value.countComment = Math.max(0, Number(moment.value.countComment || 0) + Number(delta || 0))
+  setMoment({ ...moment.value })
 }
 </script>
 
@@ -189,6 +252,10 @@ async function handleShare() {
   background: #dce8eb;
 }
 
+.detail-video {
+  background: #1f292e;
+}
+
 .article {
   display: block;
   margin-top: 26rpx;
@@ -196,6 +263,11 @@ async function handleShare() {
   font-size: 29rpx;
   line-height: 48rpx;
   white-space: pre-wrap;
+}
+
+.rich-article {
+  overflow: hidden;
+  word-break: break-word;
 }
 
 .stats {
@@ -216,10 +288,66 @@ async function handleShare() {
 .action {
   flex: 1;
   height: 64rpx;
-  border-radius: 32rpx;
-  background: #e8f8f4;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
   color: #18bda4;
   font-size: 24rpx;
   font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9rpx;
+}
+
+.action::after {
+  display: none;
+  border: 0;
+}
+
+.action-icon {
+  color: #82969a;
+  font-size: 34rpx;
+  line-height: 1;
+}
+
+.action.like-active {
+  color: #e95656;
+}
+
+.action.like-active .action-icon {
+  color: #ed4f52;
+}
+
+.action.collect-active {
+  color: #bf8611;
+}
+
+.action.collect-active .action-icon {
+  color: #efb52f;
+}
+
+.share-action {
+  color: #209f8a;
+}
+
+.share-action .share-icon {
+  color: #20b89e;
+}
+
+.comment-section {
+  margin-top: 30rpx;
+  padding-top: 26rpx;
+  border-top: 1rpx solid #e3ebec;
+}
+
+.comment-title {
+  display: block;
+  margin-bottom: 18rpx;
+  color: #2d3a40;
+  font-size: 30rpx;
+  font-weight: 900;
 }
 </style>

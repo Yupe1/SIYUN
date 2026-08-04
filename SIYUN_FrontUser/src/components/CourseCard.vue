@@ -1,7 +1,16 @@
 <template>
-  <view class="course-card card" @click="$emit('select', course)">
+  <view
+    class="course-card card"
+    :class="{ 'grid-card': layout === 'grid' }"
+    @click="$emit('select', course)"
+  >
     <view class="cover">
-      <image v-if="cover" class="cover-image" :src="cover" mode="aspectFill" />
+      <image
+        v-if="cover"
+        class="cover-image"
+        :src="cover"
+        :mode="layout === 'grid' ? 'widthFix' : 'aspectFill'"
+      />
       <view v-else class="cover-fallback">
         <text>{{ course.cateName || '课程' }}</text>
       </view>
@@ -19,8 +28,8 @@
       </view>
       <view class="bottom-row">
         <view class="price-line">
-          <text class="price">￥{{ money(course.pricePromotion || course.priceOriginal) }}</text>
-          <text v-if="course.pricePromotion" class="origin">￥{{ money(course.priceOriginal) }}</text>
+          <text v-if="salePrice !== null" class="price">￥{{ money(salePrice) }}</text>
+          <text v-else class="price">价格待定</text>
         </view>
         <text class="stats">{{ compactNumber(course.countView) }}人看过</text>
       </view>
@@ -30,18 +39,34 @@
 
 <script setup>
 import { computed } from 'vue'
-import { assetUrl, compactNumber, money } from '@/utils/format'
+import {
+  assetUrl,
+  compactNumber,
+  money,
+} from '@/utils/format'
 
 const props = defineProps({
   course: {
     type: Object,
     required: true,
   },
+  layout: {
+    type: String,
+    default: 'horizontal',
+  },
 })
 
 defineEmits(['select'])
 
 const cover = computed(() => assetUrl(props.course.coverUrl))
+const salePrice = computed(() => {
+  const value = props.course.priceOriginal
+  if (value === null || value === undefined || value === '') {
+    return null
+  }
+  const number = Number(value)
+  return Number.isFinite(number) && number >= 0 ? number : null
+})
 </script>
 
 <style scoped>
@@ -165,5 +190,93 @@ const cover = computed(() => assetUrl(props.course.coverUrl))
   max-width: 150rpx;
   color: #8d9aa0;
   font-size: 22rpx;
+}
+
+.course-card.grid-card {
+  min-width: 0;
+  min-height: 0;
+  margin-bottom: 0;
+  padding: 0;
+  display: block;
+  overflow: hidden;
+}
+
+.grid-card .cover {
+  width: 100%;
+  height: auto;
+  border-radius: 0;
+}
+
+.grid-card .cover-image {
+  height: auto;
+  display: block;
+}
+
+.grid-card .cover-fallback {
+  height: 196rpx;
+}
+
+.grid-card .course-body {
+  padding: 18rpx;
+}
+
+.grid-card .course-top {
+  align-items: flex-start;
+}
+
+.grid-card .course-title {
+  display: -webkit-box;
+  font-size: 27rpx;
+  line-height: 34rpx;
+  white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.grid-card .tag {
+  flex: none;
+  height: 34rpx;
+  padding: 0 10rpx;
+  font-size: 18rpx;
+}
+
+.grid-card .course-intro {
+  margin-top: 8rpx;
+  color: #849197;
+  font-size: 21rpx;
+  line-height: 30rpx;
+}
+
+.grid-card .meta-row {
+  min-width: 0;
+  margin-top: 12rpx;
+  display: block;
+  font-size: 20rpx;
+}
+
+.grid-card .teacher,
+.grid-card .duration {
+  display: block;
+}
+
+.grid-card .duration {
+  margin: 6rpx 0 0;
+}
+
+.grid-card .bottom-row {
+  margin-top: 13rpx;
+}
+
+.grid-card .price {
+  font-size: 27rpx;
+}
+
+.grid-card .origin {
+  display: none;
+}
+
+.grid-card .stats {
+  max-width: 118rpx;
+  font-size: 19rpx;
 }
 </style>

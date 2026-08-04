@@ -1,7 +1,7 @@
 <template>
   <view class="detail-page">
     <view class="nav-bar transparent">
-      <button class="nav-back" @tap="goBack">‹ 返回</button>
+      <button class="nav-back" hover-class="none" @tap="goBack">返回</button>
       <text class="nav-title">课程详情</text>
     </view>
 
@@ -98,10 +98,24 @@
       <view class="course-main">
         <text class="course-title">{{ course.title }}</text>
         <view class="price-row">
-          <text class="price">￥{{ money(course.pricePromotion || course.priceOriginal) }}</text>
-          <text v-if="course.pricePromotion" class="origin">￥{{ money(course.priceOriginal) }}</text>
+          <text v-if="salePrice !== null" class="price">￥{{ money(salePrice) }}</text>
+          <text v-else class="price">价格待定</text>
+          <text v-if="hasPromotion" class="origin">￥{{ money(course.priceOriginal) }}</text>
           <text class="stat">点赞数 {{ compactNumber(course.countLike) }}</text>
           <text class="stat">收藏 {{ compactNumber(course.countCollect) }}</text>
+        </view>
+        <view v-if="userStore.isLoggedIn" class="course-coupon-row">
+          <text>优惠券</text>
+          <picker
+            v-if="coupons.length"
+            mode="selector"
+            :range="couponLabels"
+            :value="selectedCouponIndex"
+            @change="selectCoupon"
+          >
+            <view class="course-coupon-picker">{{ selectedCouponLabel }} ›</view>
+          </picker>
+          <text v-else class="course-coupon-empty">暂无可用券，按原价购买</text>
         </view>
 
         <div v-show="activeTab === 0" class="tab-panel">
@@ -208,35 +222,35 @@
         </div>
 
         <div v-show="activeTab === 2" class="tab-panel comments">
-          <view v-if="userStore.isLoggedIn" class="comment-form">
-            <input
-              v-model.trim="commentText"
-              class="comment-input"
-              placeholder="写评论"
-              placeholder-class="placeholder"
-            />
-            <button class="comment-send" @tap="submitComment">发送</button>
-          </view>
-          <button v-else class="login-tip" @tap="goLogin">登录后查看评论</button>
-          <view v-for="comment in comments" :key="comment.id" class="comment-item">
-            <text class="comment-content">{{ comment.content }}</text>
-            <text class="comment-meta">{{ compactNumber(comment.countLike) }} 赞</text>
-          </view>
-          <EmptyState v-if="userStore.isLoggedIn && !comments.length" title="暂无评论" />
+          <CommentThread
+            v-if="course.id"
+            :entity-id="Number(course.id)"
+            :entity-type="0"
+          />
         </div>
       </view>
     </view>
 
     <view v-if="userStore.isLoggedIn" class="action-bar">
-      <button class="tool" @tap="likeCourse">点赞</button>
-      <button class="tool" @tap="collectCourse">收藏</button>
-      <button class="tool" @tap="shareCurrent">转发</button>
+      <button class="tool" :class="{ 'like-active': liked }" @tap="likeCourse">
+        <text class="tool-icon">{{ liked ? '♥' : '♡' }}</text>
+        <text class="tool-label">点赞</text>
+      </button>
+      <button class="tool" :class="{ 'collect-active': collected }" @tap="collectCourse">
+        <text class="tool-icon">{{ collected ? '★' : '☆' }}</text>
+        <text class="tool-label">收藏</text>
+      </button>
+      <button class="tool share-tool" @tap="shareCurrent">
+        <text class="tool-icon share-icon">↗</text>
+        <text class="tool-label">分享</text>
+      </button>
       <button
         class="order"
         :class="{ purchased: purchased }"
+        :disabled="!purchased && salePrice === null"
         @tap="purchase"
       >
-        {{ purchased ? '已购买，去学习' : `下订单：￥${money(course.pricePromotion || course.priceOriginal)}` }}
+        {{ orderButtonText }}
       </button>
     </view>
     <view v-else class="action-bar single">
@@ -249,10 +263,11 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { onHide, onLoad, onUnload } from '@dcloudio/uni-app'
 import EmptyState from '@/components/EmptyState.vue'
+import CommentThread from '@/components/CommentThread.vue'
+import { getAvailableCoupons } from '@/api/commerce'
 import {
-  addComment,
   getCollectStatus,
-  getComments,
+  getCourseDetail,
   getCourseContents,
   getLikeStatus,
   getOrderStatus,
@@ -264,7 +279,13 @@ import {
   toggleLike,
 } from '@/api/course'
 import { pickResult } from '@/utils/request'
-import { assetUrl, compactNumber, money } from '@/utils/format'
+import {
+  assetUrl,
+  compactNumber,
+  money,
+} from '@/utils/format'
+import { redirectForRecharge } from '@/utils/payment'
+import { showShareDialog } from '@/utils/share'
 import { useUserStore } from '@/stores/user'
 
 const CURRENT_COURSE_KEY = 'SIYUN_CURRENT_COURSE'
@@ -275,7 +296,7 @@ const course = ref({
   title: '课程详情',
   intro: '',
   detailDesc: '',
-  priceOriginal: 0,
+  priceOriginal: null,
   pricePromotion: 0,
   countLike: 0,
   countShare: 0,
@@ -294,16 +315,58 @@ const liked = ref(false)
 const collected = ref(false)
 const routeCourseId = ref(0)
 const playLog = ref(null)
-const comments = ref([])
-const commentText = ref('')
 const stopping = ref(false)
 const currentVideoPath = ref('')
 const pendingAutoPlay = ref(false)
 const courseContents = ref([])
+const coupons = ref([])
+const selectedCouponUserId = ref(null)
 let lastUiActionKey = ''
 let lastUiActionAt = 0
 
 const cover = computed(() => assetUrl(course.value.coverUrl))
+const originalPrice = computed(() => {
+  const value = course.value.priceOriginal
+  if (value === null || value === undefined || value === '') {
+    return null
+  }
+  const number = Number(value)
+  return Number.isFinite(number) && number >= 0 ? number : null
+})
+const selectedCoupon = computed(() => coupons.value.find(
+  (item) => Number(item.couponUserId) === Number(selectedCouponUserId.value),
+) || null)
+const couponDiscount = computed(() => Math.min(
+  Number(selectedCoupon.value?.amount || 0),
+  Number(originalPrice.value || 0),
+))
+const salePrice = computed(() => originalPrice.value === null
+  ? null
+  : Math.max(0, originalPrice.value - couponDiscount.value))
+const hasPromotion = computed(() => couponDiscount.value > 0)
+const couponOptions = computed(() => [
+  { couponUserId: null, label: '不使用优惠券' },
+  ...coupons.value.map((item, index) => ({
+    ...item,
+    label: `${index === 0 ? '最优 · ' : ''}${item.couponName}（减￥${money(item.amount)}）`,
+  })),
+])
+const couponLabels = computed(() => couponOptions.value.map((item) => item.label))
+const selectedCouponIndex = computed(() => {
+  const index = couponOptions.value.findIndex(
+    (item) => Number(item.couponUserId || 0) === Number(selectedCouponUserId.value || 0),
+  )
+  return index < 0 ? 0 : index
+})
+const selectedCouponLabel = computed(() => couponOptions.value[selectedCouponIndex.value]?.label || '不使用优惠券')
+const orderButtonText = computed(() => {
+  if (purchased.value) {
+    return '已购买，去学习'
+  }
+  return salePrice.value === null
+    ? '价格加载中'
+    : `下订单：￥${money(salePrice.value)}`
+})
 const currentVideoSrc = computed(() => assetUrl(currentVideoPath.value))
 const currentVideoKey = computed(() => `${course.value.id}-${playingEpisodeNo.value}-${currentVideoPath.value}`)
 const activeEpisodeNo = computed(() => playingEpisodeNo.value || selectedEpisodeNo.value)
@@ -338,16 +401,15 @@ const episodes = computed(() => {
 onLoad((query = {}) => {
   userStore.hydrate()
   const cached = uni.getStorageSync(CURRENT_COURSE_KEY)
-  if (cached?.id) {
+  const requestedId = Number(query.id || cached?.id || 0)
+  if (cached?.id && Number(cached.id) === requestedId) {
     course.value = cached
   }
-  routeCourseId.value = Number(query.id || course.value.id || 0)
+  routeCourseId.value = requestedId
   activeTab.value = normalizeTabIndex(query.tab)
   selectedEpisodeNo.value = normalizeEpisodeNo(query.episode || 1)
   pendingAutoPlay.value = query.play === '1'
-  if (userStore.isLoggedIn) {
-    loadInitialState()
-  }
+  initializeCourse()
 })
 
 onHide(() => {
@@ -452,7 +514,7 @@ async function loadInitialState() {
     loadOrderStatus(),
     loadLikeStatus(),
     loadCollectStatus(),
-    loadComments(),
+    loadAvailableCourseCoupons(),
   ])
   if (purchased.value) {
     await loadCourseContents()
@@ -464,6 +526,24 @@ async function loadInitialState() {
     } else {
       uni.showToast({ title: '请先购买该课程', icon: 'none' })
     }
+  }
+}
+
+async function initializeCourse() {
+  const courseId = routeCourseId.value || Number(course.value.id || 0)
+  if (!courseId) return
+  try {
+    const response = await getCourseDetail(courseId)
+    const detail = pickResult(response, 'course', null)
+    if (detail) {
+      course.value = detail
+      syncCourseCache()
+    }
+    if (userStore.isLoggedIn) {
+      await loadInitialState()
+    }
+  } catch (error) {
+    uni.showToast({ title: error.message || '课程加载失败', icon: 'none' })
   }
 }
 
@@ -654,11 +734,14 @@ async function collectCourse() {
     return
   }
   try {
-    await toggleCollect(course.value)
-    collected.value = !collected.value
-    course.value.countCollect = Math.max(0, Number(course.value.countCollect || 0) + (collected.value ? 1 : -1))
+    const response = await toggleCollect(course.value)
+    collected.value = Boolean(pickResult(response, 'collected', !collected.value))
+    const nextCount = pickResult(response, 'countCollect', null)
+    if (nextCount !== null) {
+      course.value.countCollect = Math.max(0, Number(nextCount || 0))
+    }
     syncCourseCache()
-    uni.showToast({ title: '已操作', icon: 'success' })
+    uni.showToast({ title: collected.value ? '已收藏' : '已取消收藏', icon: 'success' })
   } catch (error) {
     uni.showToast({ title: error.message || '操作失败', icon: 'none' })
   }
@@ -672,7 +755,7 @@ async function shareCurrent() {
     await shareCourse(course.value)
     course.value.countShare = Number(course.value.countShare || 0) + 1
     syncCourseCache()
-    uni.showToast({ title: '已转发', icon: 'success' })
+    showShareDialog(`/pages/course/detail?id=${course.value.id}`, '分享课程')
   } catch (error) {
     uni.showToast({ title: error.message || '转发失败', icon: 'none' })
   }
@@ -686,15 +769,42 @@ async function purchase() {
     await playEpisode(selectedEpisodeNo.value)
     return
   }
+  if (salePrice.value === null) {
+    uni.showToast({ title: '课程价格尚未加载，请稍后重试', icon: 'none' })
+    return
+  }
   try {
-    await purchaseCourse(course.value)
+    await purchaseCourse(course.value.id, selectedCouponUserId.value)
     purchased.value = true
     await loadCourseContents()
     syncCourseCache()
     uni.showToast({ title: '下单成功', icon: 'success' })
   } catch (error) {
+    if (redirectForRecharge(error, `/pages/course/detail?id=${course.value.id}`)) {
+      return
+    }
     uni.showToast({ title: error.message || '下单失败', icon: 'none' })
   }
+}
+
+async function loadAvailableCourseCoupons() {
+  const courseId = course.value.id || routeCourseId.value
+  if (!courseId) {
+    return
+  }
+  try {
+    const response = await getAvailableCoupons(2, courseId)
+    coupons.value = pickResult(response, 'coupons', [])
+    selectedCouponUserId.value = coupons.value[0]?.couponUserId || null
+  } catch (error) {
+    coupons.value = []
+    selectedCouponUserId.value = null
+  }
+}
+
+function selectCoupon(event) {
+  const option = couponOptions.value[Number(event.detail.value || 0)]
+  selectedCouponUserId.value = option?.couponUserId || null
 }
 
 async function loadOrderStatus() {
@@ -757,32 +867,6 @@ async function loadCollectStatus() {
   }
 }
 
-async function loadComments() {
-  try {
-    const response = await getComments(course.value.id)
-    comments.value = pickResult(response, 'commentList', [])
-  } catch (error) {
-    comments.value = []
-  }
-}
-
-async function submitComment() {
-  if (!ensureLogin()) {
-    return
-  }
-  if (!commentText.value) {
-    uni.showToast({ title: '请输入评论', icon: 'none' })
-    return
-  }
-  try {
-    await addComment(course.value.id, commentText.value)
-    commentText.value = ''
-    await loadComments()
-    uni.showToast({ title: '已评论', icon: 'success' })
-  } catch (error) {
-    uni.showToast({ title: error.message || '评论失败', icon: 'none' })
-  }
-}
 </script>
 
 <style scoped>
@@ -932,6 +1016,28 @@ async function submitComment() {
   margin-left: 28rpx;
   color: #7bbfb5;
   font-size: 24rpx;
+}
+
+.course-coupon-row {
+  min-height: 78rpx;
+  border-bottom: 1rpx solid #c9dfe4;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #61757d;
+  font-size: 24rpx;
+}
+
+.course-coupon-picker {
+  max-width: 470rpx;
+  color: #f06b4f;
+  font-size: 22rpx;
+  text-align: right;
+}
+
+.course-coupon-empty {
+  color: #99a7ac;
+  font-size: 21rpx;
 }
 
 .tab-panel {
@@ -1138,8 +1244,58 @@ async function submitComment() {
 .tool {
   width: 106rpx;
   height: 76rpx;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5rpx;
   color: #89969b;
-  font-size: 24rpx;
+}
+
+.tool::after {
+  display: none;
+  border: 0;
+}
+
+.tool-icon {
+  color: #9aa7ab;
+  font-size: 34rpx;
+  line-height: 34rpx;
+}
+
+.tool-label {
+  font-size: 20rpx;
+  line-height: 22rpx;
+}
+
+.tool.like-active {
+  color: #e95656;
+}
+
+.tool.like-active .tool-icon {
+  color: #ed4f52;
+}
+
+.tool.collect-active {
+  color: #d69b18;
+}
+
+.tool.collect-active .tool-icon {
+  color: #f0b52e;
+}
+
+.share-tool {
+  color: #2aa993;
+}
+
+.share-icon {
+  color: #21b89e;
+  font-size: 33rpx;
 }
 
 .order {

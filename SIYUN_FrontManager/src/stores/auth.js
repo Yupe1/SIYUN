@@ -24,7 +24,16 @@ export const useAuthStore = defineStore('auth', {
   },
   getters: {
     isLogin: (state) => Boolean(state.loginUser?.id),
-    roleNames: (state) => state.roles.map((role) => role.roleName || role.roleKey).join('、'),
+    roleNames: (state) => state.roles
+      .map((role) => typeof role === 'string' ? role : (role.roleName || role.roleKey))
+      .filter(Boolean)
+      .join('、'),
+    isTeacherOnly: (state) => {
+      const roleKeys = state.roles
+        .map((role) => typeof role === 'string' ? role : role.roleKey)
+        .filter(Boolean)
+      return roleKeys.includes('TEACHER') && !roleKeys.includes('ADMIN')
+    },
   },
   actions: {
     persist() {
@@ -60,6 +69,7 @@ export const useAuthStore = defineStore('auth', {
       const data = await http.get('/api/admin/sys/me')
       const result = data.result || {}
       this.loginUser = result.loginUser || this.loginUser
+      this.roles = result.roles || this.roles
       this.perms = result.perms || this.perms
       this.persist()
     },

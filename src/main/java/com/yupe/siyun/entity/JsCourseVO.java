@@ -32,6 +32,11 @@ public class JsCourseVO implements Serializable {
     private String teacherName;
 
     /**
+     * 前台创作者用户ID；后台教师课程为空。
+     */
+    private Integer frontCreatorId;
+
+    /**
      * 所属专业分类名
      */
     private String cateName;
@@ -120,4 +125,3 @@ public class JsCourseVO implements Serializable {
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
 }
-

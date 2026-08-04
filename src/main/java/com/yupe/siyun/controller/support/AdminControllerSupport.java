@@ -48,7 +48,7 @@ public abstract class AdminControllerSupport {
 
     protected boolean teacherOnly(HttpSession session) {
         Set<String> roles = currentRoles(session);
-        return roles.size() == 1 && roles.contains("TEACHER");
+        return roles.contains("TEACHER") && !roles.contains("ADMIN");
     }
 
     protected void ensureCourseOwnerIfTeacher(JsCourse course, HttpSession session) {
@@ -58,7 +58,9 @@ public abstract class AdminControllerSupport {
     }
 
     protected void fillCourseDefaults(JsCourse course, ObjBackUser user) {
-        if (course.getTeacherId() == null) course.setTeacherId(user.getId());
+        if (course.getTeacherId() == null && course.getFrontCreatorId() == null) {
+            course.setTeacherId(user.getId());
+        }
         if (course.getCreateBy() == null) course.setCreateBy(user.getId());
         if (course.getRecommendType() == null) course.setRecommendType(0);
         if (course.getStatusShelf() == null) course.setStatusShelf(0);

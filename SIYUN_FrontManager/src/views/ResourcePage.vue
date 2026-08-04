@@ -2,7 +2,7 @@
 import { computed, nextTick, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Present, Search } from '@element-plus/icons-vue'
+import { Plus, Search } from '@element-plus/icons-vue'
 import http from '@/api/http'
 import { useAuthStore } from '@/stores/auth'
 
@@ -16,18 +16,30 @@ const page = reactive({ current: 1, size: 10 })
 const filters = reactive({})
 const dialogVisible = ref(false)
 const auditVisible = ref(false)
-const grantVisible = ref(false)
 const statusVisible = ref(false)
 const dialogMode = ref('create')
 const form = ref({})
 const activeRow = ref(null)
 const auditForm = reactive({ auditResult: 1, statusShelf: 1, feedbackDetail: '', remark: '' })
-const grantForm = reactive({ couponId: null, userId: null })
 const statusForm = reactive({ status: null, deliverySn: '', unlockReason: '' })
 
 const shelfOptions = [
   { label: '下架/下线', value: 0 },
   { label: '上架/上线', value: 1 },
+]
+const couponApplyOptions = [
+  { label: '通用', value: 0 },
+  { label: '实体商品', value: 1 },
+  { label: '视频课程', value: 2 },
+]
+const couponIssueOptions = [
+  { label: '用户自行领取', value: 1 },
+  { label: '活动自动发放', value: 2 },
+  { label: '后台定向赠送', value: 3 },
+]
+const momentShowOptions = [
+  { label: '封禁/隐藏', value: 0 },
+  { label: '显示/上架', value: 1 },
 ]
 const goodsStatusOptions = [
   { label: '已删除', value: 0 },
@@ -64,13 +76,31 @@ const userStatusOptions = [
   { label: '封停', value: 2 },
   { label: '注销', value: 3 },
 ]
-const applyStatusOptions = [
-  { label: '申请中', value: 0 },
+const commentEntityOptions = [
+  { label: '视频课程', value: 0 },
+  { label: '微圈', value: 2 },
+]
+const auditResultOptions = [
+  { label: '驳回', value: 0 },
+  { label: '通过', value: 1 },
+]
+const creatorApplyStatusOptions = [
+  { label: '待审核', value: 0 },
   { label: '审核中', value: 1 },
   { label: '已通过', value: 2 },
   { label: '已驳回', value: 3 },
 ]
-
+const feedbackTypeOptions = [
+  { label: '视频课程', value: 1 },
+  { label: '商品', value: 2 },
+  { label: '其他', value: 3 },
+]
+const feedbackStatusOptions = [
+  { label: '待处理', value: 1 },
+  { label: '处理中', value: 2 },
+  { label: '已回复', value: 3 },
+  { label: '已解决', value: 4 },
+]
 const commonCourseFields = [
   { prop: 'teacherId', label: '讲课教师ID', type: 'text' },
   { prop: 'cateId', label: '分类ID', type: 'text' },
@@ -92,6 +122,7 @@ const configs = {
       ['id', '编号', 80],
       ['title', '名称', 180],
       ['teacherId', '教师ID', 90],
+      ['frontCreatorId', '前台创作者ID', 120],
       ['cateId', '分类', 80],
       ['priceOriginal', '价格', 100],
       ['statusShelf', '状态', 90, shelfOptions],
@@ -107,6 +138,7 @@ const configs = {
     fields: commonCourseFields,
     addPerm: 'admin:course:add',
     createPath: '/courses/create',
+    editPath: (row) => `/courses/${row.id}/edit`,
     updatePerm: 'admin:course:update',
     deletePerm: 'admin:course:delete',
     detailPerm: 'admin:course:detail',
@@ -114,23 +146,22 @@ const configs = {
   courseCreate: null,
   courseAudit: null,
   courseComments: {
-    endpoint: '/api/admin/course-comments',
+    endpoint: '/api/admin/comments',
+    defaultParams: { entityType: 0 },
     columns: [
-      ['id', '编号', 80],
-      ['entityId', '课程ID', 100],
-      ['userId', '用户ID', 100],
-      ['content', '评价内容', 280],
+      ['entityTitle', '标题', 220],
+      ['userNickname', '用户昵称', 140],
+      ['content', '内容', 420],
       ['countLike', '点赞', 80],
-      ['countReply', '回复', 80],
-      ['createTime', '评价时间', 170],
     ],
     filters: [
-      { prop: 'courseId', label: '课程ID', type: 'number' },
-      { prop: 'keyword', label: '评价内容' },
+      { prop: 'keyword', label: '搜索评论内容' },
     ],
     deleteEndpoint: (row) => `/api/admin/comments/${row.id}`,
     deletePerm: 'admin:comment:delete',
     noAdd: true,
+    noEdit: true,
+    operationWidth: 100,
   },
   courseCategories: {
     endpoint: '/api/admin/course-categories',
@@ -154,6 +185,7 @@ const configs = {
   },
   moments: {
     endpoint: '/api/admin/moments',
+    createPath: '/moments/create',
     columns: [
       ['id', '编号', 90],
       ['title', '标题', 220],
@@ -183,10 +215,10 @@ const configs = {
     updatePerm: 'admin:moment:update',
     deletePerm: 'admin:moment:delete',
   },
-  momentCreate: null,
   momentAudit: null,
   goods: {
     endpoint: '/api/admin/goods',
+    createPath: '/goods/create',
     columns: [
       ['id', '编号', 80],
       ['goodsName', '商品名称', 200],
@@ -215,7 +247,6 @@ const configs = {
     updatePerm: 'admin:goods:update',
     deletePerm: 'admin:goods:delete',
   },
-  goodsCreate: null,
   goodsAudit: null,
   goodsCategories: {
     endpoint: '/api/admin/goods-categories',
@@ -244,12 +275,13 @@ const configs = {
   returnOrders: null,
   coupons: {
     endpoint: '/api/admin/coupons',
+    createPath: '/marketing/coupons/create',
     columns: [
       ['id', '编号', 80],
       ['couponSn', '优惠券编号', 150],
       ['couponName', '名称', 160],
       ['amount', '金额', 90],
-      ['applyType', '适用类型', 90],
+      ['applyType', '适用类型', 100, couponApplyOptions],
       ['statusShelf', '上下线', 90, shelfOptions],
       ['startTime', '开始时间', 170],
       ['endTime', '结束时间', 170],
@@ -261,38 +293,48 @@ const configs = {
     fields: [
       { prop: 'couponSn', label: '优惠券编号' },
       { prop: 'couponName', label: '优惠券名称' },
-      { prop: 'amount', label: '面值金额', type: 'number' },
+      { prop: 'amount', label: '面值金额', type: 'text', append: '元' },
       { prop: 'imgUrl', label: '图片路径' },
       { prop: 'startTime', label: '开始时间', type: 'datetime' },
       { prop: 'endTime', label: '结束时间', type: 'datetime' },
       { prop: 'statusShelf', label: '上下线', type: 'select', options: shelfOptions },
-      { prop: 'issueType', label: '发放类型', type: 'number' },
-      { prop: 'applyType', label: '适用类型', type: 'number' },
+      { prop: 'issueType', label: '发放类型', type: 'select', options: couponIssueOptions },
+      { prop: 'applyType', label: '适用类型', type: 'select', options: couponApplyOptions },
     ],
     addPerm: 'admin:coupon:add',
     updatePerm: 'admin:coupon:update',
     deletePerm: 'admin:coupon:delete',
   },
-  couponUsers: {
-    endpoint: '/api/admin/coupon-users',
+  couponGoods: {
+    endpoint: '/api/admin/coupon-goods',
     columns: [
-      ['id', '券ID', 80],
-      ['couponSn', '编号', 150],
-      ['couponName', '名称', 160],
-      ['amount', '金额', 90],
-      ['userId', '用户ID', 90],
+      ['id', '关系编号', 90],
+      ['itemName', '适用商品/课程', 220],
       ['goodsId', '商品/课程ID', 120],
+      ['couponSn', '优惠券编号', 150],
+      ['couponName', '优惠券名称', 170],
+      ['amount', '面值', 90],
+      ['applyType', '适用类型', 110, couponApplyOptions],
+      ['quota', '剩余数量', 100],
+      ['statusShelf', '上下线', 90, shelfOptions],
       ['startTime', '开始时间', 170],
       ['endTime', '结束时间', 170],
     ],
-    filters: [{ prop: 'userId', label: '用户ID', type: 'number' }],
+    filters: [
+      { prop: 'keyword', label: '商品/课程名称' },
+      { prop: 'couponId', label: '优惠券ID', type: 'number' },
+      { prop: 'applyType', label: '适用类型', type: 'select', options: couponApplyOptions },
+    ],
     noAdd: true,
-    grant: true,
+    noEdit: true,
+    noDelete: true,
   },
   ads: {
     endpoint: '/api/admin/ads',
+    createPath: '/marketing/ads/create',
     columns: [
       ['id', '编号', 80],
+      ['courseId', '课程ID', 90],
       ['title', '标题', 180],
       ['positionType', '位置', 80],
       ['statusShow', '显示', 80, shelfOptions],
@@ -318,16 +360,72 @@ const configs = {
   auditLogs: {
     endpoint: '/api/admin/audit-logs',
     columns: [
-      ['id', '编号', 80],
-      ['entityId', '实体ID', 100],
-      ['entityType', '类型', 80],
-      ['applicantId', '申请人', 90],
-      ['auditorId', '审核人', 90],
-      ['auditResult', '结果', 80],
+      ['entityName', '内容名称', 220],
+      ['entityTypeName', '类型', 100],
+      ['applicantName', '提交人', 130],
+      ['auditorName', '审核人', 130],
+      ['auditResult', '结果', 90, auditResultOptions],
       ['feedbackDetail', '反馈', 240],
       ['auditTime', '审核时间', 170],
     ],
     noAdd: true,
+    noEdit: true,
+    noDelete: true,
+    noOperations: true,
+  },
+  creatorAudit: {
+    endpoint: '/api/admin/position-applies',
+    defaultParams: { targetPosition: 'creator' },
+    columns: [
+      ['userNickname', '申请用户', 140],
+      ['stuTel', '账号', 140],
+      ['targetPositionName', '申请类型', 120],
+      ['applyReason', '申请说明', 300],
+      ['status', '状态', 100, creatorApplyStatusOptions],
+      ['handlerName', '审核人', 130],
+      ['applyTime', '申请时间', 170],
+      ['handleRemark', '审核备注', 220],
+    ],
+    filters: [
+      { prop: 'status', label: '审核状态', type: 'select', options: creatorApplyStatusOptions },
+    ],
+    noAdd: true,
+    noEdit: true,
+    noDelete: true,
+    auditEndpoint: (row) => `/api/admin/position-applies/${row.id}/audit`,
+    auditPerm: 'admin:apply:audit',
+    auditTitle: '审核创作者申请',
+    auditFeedbackLabel: '审核备注',
+    transformAudit: (payload) => ({
+      status: payload.auditResult === 1 ? 2 : 3,
+      handleRemark: payload.feedbackDetail,
+    }),
+    operationWidth: 100,
+  },
+  feedback: {
+    endpoint: '/api/admin/feedback',
+    columns: [
+      ['userNickname', '用户昵称', 140],
+      ['feedbackType', '问题类型', 110, feedbackTypeOptions],
+      ['content', '反馈内容', 360],
+      ['status', '处理状态', 110, feedbackStatusOptions],
+      ['remark', '处理回复', 260],
+      ['createTime', '提交时间', 170],
+    ],
+    filters: [
+      { prop: 'keyword', label: '搜索反馈内容' },
+      { prop: 'status', label: '处理状态', type: 'select', options: feedbackStatusOptions },
+    ],
+    fields: [
+      { prop: 'status', label: '处理状态', type: 'select', options: feedbackStatusOptions },
+      { prop: 'remark', label: '回复用户', type: 'textarea' },
+    ],
+    noAdd: true,
+    noDelete: true,
+    updatePerm: 'admin:feedback:reply',
+    editLabel: '处理',
+    editTitle: '处理问题反馈',
+    operationWidth: 100,
   },
   comments: null,
   permissions: {
@@ -382,41 +480,6 @@ const configs = {
     ],
     updatePerm: 'admin:user:update',
   },
-  staffUsers: {
-    endpoint: '/api/admin/staff-users',
-    columns: [
-      ['id', '编号', 80],
-      ['name', '姓名', 120],
-      ['tel', '手机号', 130],
-      ['deptId', '部门', 80],
-      ['status', '状态', 90, userStatusOptions],
-      ['level', '级别', 80],
-      ['salary', '薪资', 100],
-    ],
-    filters: [
-      { prop: 'keyword', label: '姓名/手机号' },
-      { prop: 'status', label: '状态', type: 'select', options: userStatusOptions },
-    ],
-    fields: [
-      { prop: 'name', label: '姓名' },
-      { prop: 'tel', label: '手机号' },
-      { prop: 'password', label: '密码' },
-      { prop: 'email', label: '邮箱' },
-      { prop: 'gender', label: '性别', type: 'number' },
-      { prop: 'chinaId', label: '身份证' },
-      { prop: 'birth', label: '生日', type: 'date' },
-      { prop: 'deptId', label: '部门ID', type: 'number' },
-      { prop: 'status', label: '状态', type: 'select', options: userStatusOptions },
-      { prop: 'level', label: '级别', type: 'number' },
-      { prop: 'salary', label: '薪资', type: 'number' },
-      { prop: 'roleIds', label: '角色ID(逗号)' },
-      { prop: 'remark', label: '备注' },
-    ],
-    addPerm: 'admin:staff:add',
-    updatePerm: 'admin:staff:update',
-    deletePerm: 'admin:staff:delete',
-    transformSubmit: (data) => ({ ...data, roleIds: splitIds(data.roleIds) }),
-  },
   depts: {
     endpoint: '/api/admin/depts',
     dataKey: 'depts',
@@ -438,36 +501,25 @@ const configs = {
     updatePerm: 'admin:dept:update',
     deletePerm: 'admin:dept:delete',
   },
-  positionApplies: {
-    endpoint: '/api/admin/position-applies',
-    columns: [
-      ['id', '编号', 80],
-      ['userId', '用户ID', 90],
-      ['targetPosition', '申请职务', 120],
-      ['tel', '手机号', 130],
-      ['email', '邮箱', 170],
-      ['status', '状态', 100, applyStatusOptions],
-      ['applyTime', '申请时间', 170],
-      ['handleRemark', '处理备注', 180],
-    ],
-    filters: [{ prop: 'status', label: '状态', type: 'select', options: applyStatusOptions }],
-    noAdd: true,
-    auditEndpoint: (row) => `/api/admin/position-applies/${row.id}/audit`,
-    auditPerm: 'admin:apply:audit',
-    auditFields: 'apply',
-  },
 }
 
 configs.courseCreate = { ...configs.courses, autoCreate: true, noDelete: true }
 configs.courseAudit = { ...configs.courses, defaultParams: { statusAudit: 1 }, noAdd: true, auditEndpoint: (row) => `/api/admin/courses/${row.id}/audit`, auditPerm: 'admin:course:audit' }
-configs.momentCreate = { ...configs.moments, autoCreate: true, noDelete: true }
 configs.momentAudit = { ...configs.moments, defaultParams: { status: 2 }, noAdd: true, auditEndpoint: (row) => `/api/admin/moments/${row.id}/audit`, auditPerm: 'admin:moment:audit' }
-configs.goodsCreate = { ...configs.goods, autoCreate: true, noDelete: true }
+configs.momentComments = { ...configs.courseComments, defaultParams: { entityType: 2 } }
 configs.goodsAudit = { ...configs.goods, defaultParams: { status: 1 }, noAdd: true, auditEndpoint: (row) => `/api/admin/goods/${row.id}/audit`, auditPerm: 'admin:goods:audit' }
 configs.goodsOrders = orderConfig('/api/admin/orders', { entityType: 2 })
 configs.courseOrders = orderConfig('/api/admin/orders', { entityType: 1 })
 configs.returnOrders = { ...orderConfig('/api/admin/orders/returns', {}), noAdd: true, returnAudit: true }
-configs.comments = { ...configs.courseComments, endpoint: '/api/admin/comments' }
+configs.comments = {
+  ...configs.courseComments,
+  endpoint: '/api/admin/comments',
+  defaultParams: undefined,
+  filters: [
+    { prop: 'keyword', label: '搜索评论内容' },
+    { prop: 'entityType', label: '内容类型', type: 'select', options: commentEntityOptions },
+  ],
+}
 
 const config = computed(() => configs[route.meta.resource] || configs.courses)
 
@@ -549,6 +601,10 @@ function openCreate() {
 }
 
 function openEdit(row) {
+  if (config.value.editPath) {
+    router.push(config.value.editPath(row))
+    return
+  }
   dialogMode.value = 'edit'
   form.value = { ...row }
   dialogVisible.value = true
@@ -577,21 +633,17 @@ async function deleteRow(row) {
 function openAudit(row) {
   activeRow.value = row
   auditForm.auditResult = 1
-  auditForm.statusShelf = 1
+  auditForm.statusShelf = route.meta.resource === 'momentAudit' ? (row.statusShow ?? 1) : (row.statusShelf ?? 1)
   auditForm.feedbackDetail = ''
   auditForm.remark = ''
   auditVisible.value = true
 }
 
 async function submitAudit() {
-  if (config.value.auditFields === 'apply') {
-    await http.post(config.value.auditEndpoint(activeRow.value), {
-      status: auditForm.auditResult === 1 ? 2 : 3,
-      handleRemark: auditForm.feedbackDetail,
-    })
-  } else {
-    await http.post(config.value.auditEndpoint(activeRow.value), auditForm)
-  }
+  const payload = config.value.transformAudit
+    ? config.value.transformAudit({ ...auditForm })
+    : { ...auditForm }
+  await http.post(config.value.auditEndpoint(activeRow.value), payload)
   ElMessage.success('审核完成')
   auditVisible.value = false
   await load()
@@ -626,35 +678,12 @@ async function topAd(row) {
   await load()
 }
 
-function openGrant() {
-  grantForm.couponId = null
-  grantForm.userId = null
-  grantVisible.value = true
-}
-
-async function submitGrant() {
-  await http.post('/api/admin/coupon-users/grant', grantForm)
-  ElMessage.success('赠送成功')
-  grantVisible.value = false
-  await load()
-}
-
 function normalizePayload(raw) {
   const data = { ...raw }
   for (const key of Object.keys(data)) {
     if (data[key] === '') data[key] = null
   }
   return config.value.transformSubmit ? config.value.transformSubmit(data) : data
-}
-
-function splitIds(value) {
-  if (Array.isArray(value)) return value
-  if (!value) return []
-  return value
-    .toString()
-    .split(',')
-    .map((item) => Number(item.trim()))
-    .filter(Boolean)
 }
 
 function formatValue(row, col) {
@@ -696,7 +725,6 @@ function can(perm) {
         <el-button @click="resetFilters(); load()">重置</el-button>
       </div>
       <div class="toolbar-actions">
-        <el-button v-if="config.grant && can('admin:coupon:grant')" type="primary" :icon="Present" @click="openGrant">赠送优惠券</el-button>
         <el-button v-if="!config.noAdd && can(config.addPerm)" type="primary" :icon="Plus" @click="openCreate">新增</el-button>
       </div>
     </div>
@@ -712,14 +740,14 @@ function can(perm) {
       >
         <template #default="{ row }">{{ formatValue(row, col) }}</template>
       </el-table-column>
-      <el-table-column label="操作" fixed="right" width="260">
+      <el-table-column v-if="!config.noOperations" label="操作" fixed="right" :width="config.operationWidth || 260">
         <template #default="{ row }">
           <el-button v-if="config.auditEndpoint && can(config.auditPerm)" link type="primary" @click="openAudit(row)">审核</el-button>
           <el-button v-if="config.statusAction" link type="primary" @click="openStatus(row)">状态</el-button>
           <el-button v-if="config.returnAudit" link type="primary" @click="returnAudit(row, 1)">通过退货</el-button>
           <el-button v-if="config.returnAudit" link type="danger" @click="returnAudit(row, 0)">拒绝</el-button>
           <el-button v-if="config.topPerm && can(config.topPerm)" link type="primary" @click="topAd(row)">置顶</el-button>
-          <el-button v-if="!config.noEdit && can(config.updatePerm)" link type="primary" @click="openEdit(row)">编辑</el-button>
+          <el-button v-if="!config.noEdit && can(config.updatePerm)" link type="primary" @click="openEdit(row)">{{ config.editLabel || '编辑' }}</el-button>
           <el-button v-if="!config.noDelete && can(config.deletePerm)" link type="danger" @click="deleteRow(row)">删除</el-button>
         </template>
       </el-table-column>
@@ -735,7 +763,11 @@ function can(perm) {
       />
     </div>
 
-    <el-dialog v-model="dialogVisible" :title="dialogMode === 'create' ? '新增' : '编辑'" width="720px">
+    <el-dialog
+      v-model="dialogVisible"
+      :title="dialogMode === 'create' ? (config.createTitle || '新增') : (config.editTitle || '编辑')"
+      width="720px"
+    >
       <el-form label-width="120px" class="dialog-form">
         <el-form-item v-for="field in config.fields || []" :key="field.prop" :label="field.label">
           <el-input v-if="!field.type" v-model="form[field.prop]" clearable />
@@ -763,7 +795,7 @@ function can(perm) {
       </template>
     </el-dialog>
 
-    <el-dialog v-model="auditVisible" title="审核" width="560px">
+    <el-dialog v-model="auditVisible" :title="config.auditTitle || '审核'" width="560px">
       <el-form label-width="110px">
         <el-form-item label="审核结果">
           <el-radio-group v-model="auditForm.auditResult">
@@ -771,12 +803,20 @@ function can(perm) {
             <el-radio-button :label="0">驳回</el-radio-button>
           </el-radio-group>
         </el-form-item>
-        <el-form-item v-if="route.meta.resource === 'courseAudit'" label="上架状态">
+        <el-form-item
+          v-if="route.meta.resource === 'courseAudit' || route.meta.resource === 'momentAudit'"
+          :label="route.meta.resource === 'momentAudit' ? '显示状态' : '上架状态'"
+        >
           <el-select v-model="auditForm.statusShelf" class="full-control">
-            <el-option v-for="option in shelfOptions" :key="option.value" :label="option.label" :value="option.value" />
+            <el-option
+              v-for="option in route.meta.resource === 'momentAudit' ? momentShowOptions : shelfOptions"
+              :key="option.value"
+              :label="option.label"
+              :value="option.value"
+            />
           </el-select>
         </el-form-item>
-        <el-form-item label="详情反馈">
+        <el-form-item :label="config.auditFeedbackLabel || '详情反馈'">
           <el-input v-model="auditForm.feedbackDetail" type="textarea" :rows="4" />
         </el-form-item>
       </el-form>
@@ -803,19 +843,5 @@ function can(perm) {
       </template>
     </el-dialog>
 
-    <el-dialog v-model="grantVisible" title="赠送优惠券" width="480px">
-      <el-form label-width="100px">
-        <el-form-item label="优惠券ID">
-          <el-input-number v-model="grantForm.couponId" class="full-control" />
-        </el-form-item>
-        <el-form-item label="用户ID">
-          <el-input-number v-model="grantForm.userId" class="full-control" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="grantVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitGrant">赠送</el-button>
-      </template>
-    </el-dialog>
   </section>
 </template>

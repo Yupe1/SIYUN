@@ -11,7 +11,7 @@ import java.util.List;
 public interface CourseVOService extends IService<JsCourseVO> {
     List<JsCourseVO> search(String keywords);
 
-    void purchase(ObjFrontUser frontUser, JsCourse jsCourse);
+    void purchase(ObjFrontUser frontUser, JsCourse jsCourse, Integer couponUserId);
 
     ApxCoursePlayLog startPlay(ObjFrontUser frontUser, JsCourse jsCourse);
 

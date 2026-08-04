@@ -1,5 +1,6 @@
 page {
   min-height: 100%;
+  overflow-x: hidden;
   background: #f4f8f8;
   color: #263238;
   font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif;
@@ -13,9 +14,34 @@ textarea,
 button,
 scroll-view,
 swiper,
-swiper-item {
+swiper-item,
+image,
+video,
+editor,
+rich-text {
   box-sizing: border-box;
 }
+
+/* #ifdef H5 */
+html,
+body,
+#app,
+uni-page-body {
+  max-width: 100%;
+  overflow-x: hidden;
+  scrollbar-width: none;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+#app::-webkit-scrollbar,
+uni-page-body::-webkit-scrollbar,
+::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+/* #endif */
 
 button {
   margin: 0;
@@ -81,14 +107,25 @@ button::after {
   position: absolute;
   left: 28rpx;
   bottom: 0;
-  min-width: 132rpx;
+  width: auto;
+  min-width: 0;
   height: 88rpx;
-  padding-right: 20rpx;
+  padding: 0 8rpx;
   display: flex;
   align-items: center;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   color: #18bda4;
   font-size: 28rpx;
+  font-weight: 500;
+  box-shadow: none;
   z-index: 2;
+}
+
+.nav-back::after {
+  display: none;
+  border: 0;
 }
 
 .nav-title {

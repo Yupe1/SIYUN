@@ -14,7 +14,12 @@ const visibleGroups = computed(() =>
   menuGroups
     .map((group) => ({
       ...group,
-      children: group.children.filter((item) => auth.hasAny(item.perms)),
+      children: group.children
+        .filter((item) => auth.hasAny(item.perms))
+        .map((item) => ({
+          ...item,
+          title: auth.isTeacherOnly && item.path === '/courses/list' ? '我的课程' : item.title,
+        })),
     }))
     .filter((group) => group.children.length > 0),
 )
@@ -23,7 +28,10 @@ const activeGroup = computed(() => {
   return visibleGroups.value.find((group) => route.path.startsWith(group.base)) || visibleGroups.value[0]
 })
 
-const pageTitle = computed(() => route.meta.title || activeGroup.value?.title || '系统首页')
+const pageTitle = computed(() => {
+  if (auth.isTeacherOnly && route.path === '/courses/list') return '我的课程'
+  return route.meta.title || activeGroup.value?.title || '系统首页'
+})
 
 async function logout() {
   await ElMessageBox.confirm('确认退出后台管理系统？', '退出登录', { type: 'warning' })

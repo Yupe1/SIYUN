@@ -20,6 +20,10 @@ public class JsCourse implements Serializable {
     @TableId(value = "id", type = IdType.AUTO)
     private Integer id;
     private Integer teacherId;
+    /**
+     * 前台创作者用户ID。后台教师课程使用 teacherId，前台上传课程使用此字段。
+     */
+    private Integer frontCreatorId;
     private Integer cateId;
     //0普通 1新品 2推荐
     private Integer recommendType;

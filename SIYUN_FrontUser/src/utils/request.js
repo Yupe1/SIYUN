@@ -85,6 +85,13 @@ function createRequestError(message, payload = {}) {
 export function request(options) {
   const { url, method = 'GET', data, header = {}, loading = false } = options
   const cookie = readCookie()
+  const normalizedMethod = String(method || 'GET').toUpperCase()
+  const requestData = normalizedMethod === 'GET'
+    ? {
+        ...(data && typeof data === 'object' ? data : {}),
+        _t: Date.now(),
+      }
+    : data
 
   if (loading) {
     uni.showLoading({
@@ -96,11 +103,17 @@ export function request(options) {
   return new Promise((resolve, reject) => {
     uni.request({
       url: normalizeUrl(url),
-      method,
-      data,
+      method: normalizedMethod,
+      data: requestData,
       withCredentials: true,
       header: {
         'content-type': 'application/json',
+        ...(normalizedMethod === 'GET'
+          ? {
+              'Cache-Control': 'no-cache',
+              Pragma: 'no-cache',
+            }
+          : {}),
         ...(cookie ? { Cookie: cookie } : {}),
         ...header,
       },
@@ -141,6 +154,65 @@ export function request(options) {
         }
       },
     })
+  })
+}
+
+export function uploadFile(options) {
+  const {
+    url,
+    filePath,
+    name = 'file',
+    formData = {},
+    header = {},
+    onProgress,
+  } = options
+  const cookie = readCookie()
+
+  return new Promise((resolve, reject) => {
+    const task = uni.uploadFile({
+      url: normalizeUrl(url),
+      filePath,
+      name,
+      formData,
+      withCredentials: true,
+      header: {
+        ...(cookie ? { Cookie: cookie } : {}),
+        ...header,
+      },
+      success: (response) => {
+        saveCookie(response.header)
+        let payload = response.data
+        if (typeof payload === 'string') {
+          try {
+            payload = JSON.parse(payload)
+          } catch (error) {
+            reject(createRequestError('服务器返回格式错误', { statusCode: response.statusCode }))
+            return
+          }
+        }
+        if (response.statusCode < 200 || response.statusCode >= 300) {
+          reject(createRequestError(payload?.msg || `上传失败：${response.statusCode}`, {
+            ...(payload || {}),
+            statusCode: response.statusCode,
+          }))
+          return
+        }
+        if (payload && typeof payload.errorCode === 'number' && payload.errorCode !== 0) {
+          const error = createRequestError(payload.msg || '上传失败', payload)
+          if (error.sessionExpired) {
+            notifyUnauthorized(payload)
+          }
+          reject(error)
+          return
+        }
+        resolve(payload)
+      },
+      fail: (error) => reject(new Error(error.errMsg || '上传失败')),
+    })
+
+    if (typeof onProgress === 'function' && task?.onProgressUpdate) {
+      task.onProgressUpdate((event) => onProgress(Number(event.progress || 0)))
+    }
   })
 }
 
