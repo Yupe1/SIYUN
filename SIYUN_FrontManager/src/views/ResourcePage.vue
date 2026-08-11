@@ -522,6 +522,7 @@ configs.comments = {
 }
 
 const config = computed(() => configs[route.meta.resource] || configs.courses)
+const hasFilters = computed(() => Array.isArray(config.value.filters) && config.value.filters.length > 0)
 
 watch(
   () => route.meta.resource,
@@ -584,6 +585,16 @@ async function load() {
 function resetFilters() {
   Object.keys(filters).forEach((key) => delete filters[key])
   page.current = 1
+}
+
+async function search() {
+  page.current = 1
+  await load()
+}
+
+async function resetAndLoad() {
+  resetFilters()
+  await load()
 }
 
 function cleanParams(source) {
@@ -700,7 +711,7 @@ function can(perm) {
 <template>
   <section class="table-page">
     <div class="toolbar">
-      <div class="filters">
+      <div v-if="hasFilters" class="filters">
         <template v-for="field in config.filters || []" :key="field.prop">
           <el-input
             v-if="!field.type"
@@ -708,7 +719,7 @@ function can(perm) {
             :placeholder="field.label"
             clearable
             class="filter-item"
-            @keyup.enter="load"
+            @keyup.enter="search"
           />
           <el-input-number
             v-else-if="field.type === 'number'"
@@ -721,8 +732,8 @@ function can(perm) {
             <el-option v-for="option in field.options" :key="option.value" :label="option.label" :value="option.value" />
           </el-select>
         </template>
-        <el-button :icon="Search" type="primary" @click="load">查询</el-button>
-        <el-button @click="resetFilters(); load()">重置</el-button>
+        <el-button :icon="Search" type="primary" @click="search">查询</el-button>
+        <el-button @click="resetAndLoad">重置</el-button>
       </div>
       <div class="toolbar-actions">
         <el-button v-if="!config.noAdd && can(config.addPerm)" type="primary" :icon="Plus" @click="openCreate">新增</el-button>

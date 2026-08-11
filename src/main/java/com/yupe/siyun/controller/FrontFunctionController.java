@@ -82,8 +82,6 @@ public class FrontFunctionController {
     @Autowired
     private OpOrderMapper opOrderMapper;
     @Autowired
-    private OpCouponUserMapper opCouponUserMapper;
-    @Autowired
     private OpFrontUserWalletMapper opFrontUserWalletMapper;
     @Autowired
     private CoUserFeedbackMapper coUserFeedbackMapper;
@@ -914,6 +912,12 @@ public class FrontFunctionController {
         JsCourse course = normalizeCreatorCourse(payload, frontUser, null);
         jsCourseMapper.insert(course);
         List<JsCourseContent> contents = insertCreatorCourseContents(course.getId(), payload.getContents());
+        OpOrder order = new OpOrder();
+        order.setUserId(frontUser.getId());
+        order.setEntityId(course.getId());
+        order.setEntityType(1);
+        order.setStatus(1);
+        opOrderMapper.insert(order);
         return ResultData.success(
                 new String[]{"course", "contents"},
                 new Object[]{course, contents},
