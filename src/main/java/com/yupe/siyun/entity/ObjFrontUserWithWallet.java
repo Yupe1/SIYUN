@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 /*
@@ -43,7 +44,7 @@ public class ObjFrontUserWithWallet implements Serializable {
     private String jobOrient;
     private String remark;
     //账户余额
-    private Double wallet;
+    private BigDecimal wallet;
     @Version
     private Integer version;
 }

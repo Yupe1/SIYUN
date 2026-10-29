@@ -7,11 +7,7 @@ import com.yupe.siyun.interceptor.BackRoleInterceptor;
 import com.yupe.siyun.interceptor.FrontUserInterceptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.web.filter.CorsFilter;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -41,32 +37,6 @@ public class WebMvcConfig implements WebMvcConfigurer {
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         registry.addResourceHandler("/uploaded/**")
                 .addResourceLocations("file:" + basePath + "uploaded/");
-    }
-
-    /**
-     * 跨域配置 (保留你之前的极客局域网/本地兼容配置)
-     */
-    @Bean
-    public CorsFilter corsFilter() {
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        CorsConfiguration config = new CorsConfiguration();
-
-        config.addAllowedOriginPattern("http://localhost:5173");
-        config.addAllowedOriginPattern("http://localhost:5174");
-        config.addAllowedOriginPattern("http://localhost:5175");
-        config.addAllowedOriginPattern("http://127.0.0.1:5173");
-        config.addAllowedOriginPattern("http://127.0.0.1:5174");
-        config.addAllowedOriginPattern("http://127.0.0.1:5175");
-        config.addAllowedOriginPattern("http://192.168.*.*:5173");
-        config.addAllowedOriginPattern("http://10.*.*.*:5173");
-
-        config.setAllowCredentials(true);
-        config.addAllowedHeader("*");
-        config.addAllowedMethod("*");
-        config.setMaxAge(3600L);
-
-        source.registerCorsConfiguration("/**", config);
-        return new CorsFilter(source);
     }
 
     /**

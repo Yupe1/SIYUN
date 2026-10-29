@@ -9,6 +9,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 
 @Data
 @NoArgsConstructor
@@ -21,7 +22,7 @@ public class OpFrontUserWallet implements Serializable {
 
     @TableId(value = "front_user_id")
     private Integer frontUserId;
-    private Double wallet;
+    private BigDecimal wallet;
     @Version
     private Integer version;
 }
